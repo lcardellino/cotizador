@@ -1,0 +1,5 @@
+{
+  "name": "Plataforma de Gestión y Cotización de Viajes",
+  "description": "Dashboard de métricas de viajes y cotizador avanzado de costos de transporte con gestión en MongoDB.",
+  "requestFramePermissions": []
+}
