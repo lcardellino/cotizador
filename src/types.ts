@@ -1,10 +1,25 @@
 export type BudgetStatus = 'pendiente' | 'confirmado' | 'realizado' | 'cancelado';
+export type PaymentStatus = 'pago' | 'falta_pagar';
 export type TripType = 'provincial' | 'nacional' | 'internacional';
+export type VehicleStatus = 'activo' | 'mantenimiento' | 'inactivo';
+
+export interface Vehicle {
+  id: string;
+  plate: string;
+  unitType: string; // '19', '24', '44', '46', '60'
+  brand: string;
+  model: string;
+  year: number;
+  status: VehicleStatus;
+  mileage: number;
+  lastMaintenance?: string;
+}
 
 export interface SavedBudget {
   id: string;
   budgetNumber: string;
   status: BudgetStatus;
+  paymentStatus?: PaymentStatus;
   date: string;
   client: string;
   time: string;

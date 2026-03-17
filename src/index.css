@@ -1,5 +1,18 @@
 @import "tailwindcss";
 
+/* Override oklch colors for html2canvas compatibility */
+:root {
+  --color-border: #e5e7eb;
+  --color-foreground: #1f2937;
+  --color-background: #ffffff;
+}
+
+.pdf-export-template {
+  --color-border: #e5e7eb;
+  --color-foreground: #1f2937;
+  --color-background: #ffffff;
+}
+
 .fire-slider {
   -webkit-appearance: none;
   appearance: none;

@@ -1,26 +1,31 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend
+  PieChart, Pie, Cell, Legend, ComposedChart, Line
 } from "recharts";
-import { MapPin, Users, Route, Car } from "lucide-react";
+import { MapPin, Users, Route, Car, Plus, FileText, CheckCircle, DollarSign, TrendingUp, TrendingDown, ArrowUpRight, XCircle, Clock } from "lucide-react";
 
 interface DashboardData {
-  totalTrips: number;
-  totalKm: number;
+  completedTrips: number;
+  monthlyCompletedTripsRate: number;
+  estimatedRevenue: number;
+  monthlyRevenueRate: number;
   totalPassengers: number;
-  avgKmPerTrip: number;
+
+  unitMetrics: {
+    unitType: string;
+    trips: number;
+    avgPricePerKm: number;
+  }[];
+
   tripTypes: {
     short: number;
     medium: number;
     long: number;
   };
-  tripScopes: {
-    provincial: number;
-    national: number;
-    international: number;
-  };
   heatmapData: { location: string; value: number }[];
+  recentBudgets: any[];
 }
 
 const COLORS = ['#16a34a', '#dc2626', '#f59e0b', '#2563eb', '#8b5cf6'];
@@ -34,28 +39,49 @@ export default function Dashboard() {
       const savedBudgetsStr = localStorage.getItem("savedBudgets");
       const budgets: any[] = savedBudgetsStr ? JSON.parse(savedBudgetsStr) : [];
       
-      // Filter only 'realizado' budgets for statistics
-      const realizedBudgets = budgets.filter(b => b.status === 'realizado');
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
       
-      const totalTrips = realizedBudgets.length;
-      const totalKm = realizedBudgets.reduce((acc, b) => acc + (Number(b.km) || 0), 0);
-      const totalPassengers = realizedBudgets.reduce((acc, b) => acc + (Number(b.passengers) || 0), 0); // Assuming passengers might be added later, or we just use 0
-      const avgKmPerTrip = totalTrips > 0 ? totalKm / totalTrips : 0;
+      const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+      const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
 
-      const tripTypes = {
-        short: realizedBudgets.filter(b => b.km < 100).length,
-        medium: realizedBudgets.filter(b => b.km >= 100 && b.km <= 500).length,
-        long: realizedBudgets.filter(b => b.km > 500).length,
+      const isCurrentMonth = (dateStr: string) => {
+        if (!dateStr) return false;
+        const d = new Date(dateStr + 'T00:00:00');
+        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
       };
 
-      const tripScopes = {
-        provincial: realizedBudgets.filter(b => b.tripType === 'provincial').length,
-        national: realizedBudgets.filter(b => b.tripType === 'nacional').length,
-        international: realizedBudgets.filter(b => b.tripType === 'internacional').length,
+      const isLastMonth = (dateStr: string) => {
+        if (!dateStr) return false;
+        const d = new Date(dateStr + 'T00:00:00');
+        return d.getMonth() === lastMonth && d.getFullYear() === lastMonthYear;
+      };
+
+      const completedTripsList = budgets.filter(b => b.status === 'realizado');
+      const completedTrips = completedTripsList.length;
+      const currentMonthCompletedTrips = completedTripsList.filter(b => isCurrentMonth(b.date)).length;
+      const lastMonthCompletedTrips = completedTripsList.filter(b => isLastMonth(b.date)).length;
+      const monthlyCompletedTripsRate = lastMonthCompletedTrips === 0 ? 100 : ((currentMonthCompletedTrips - lastMonthCompletedTrips) / lastMonthCompletedTrips) * 100;
+
+      const acceptedBudgetsList = budgets.filter(b => b.status === 'realizado' || b.status === 'confirmado');
+
+      const estimatedRevenue = acceptedBudgetsList.reduce((acc, b) => acc + (Number(b.finalPrice) || 0), 0);
+      
+      const currentMonthRevenue = acceptedBudgetsList.filter(b => isCurrentMonth(b.date)).reduce((acc, b) => acc + (Number(b.finalPrice) || 0), 0);
+      const lastMonthRevenue = acceptedBudgetsList.filter(b => isLastMonth(b.date)).reduce((acc, b) => acc + (Number(b.finalPrice) || 0), 0);
+      const monthlyRevenueRate = lastMonthRevenue === 0 ? 100 : ((currentMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100;
+
+      const totalPassengers = acceptedBudgetsList.reduce((acc, b) => acc + (Number(b.passengers) || 0), 0);
+
+      const tripTypes = {
+        short: acceptedBudgetsList.filter(b => b.km < 100).reduce((acc, b) => acc + (Number(b.km) || 0), 0),
+        medium: acceptedBudgetsList.filter(b => b.km >= 100 && b.km <= 500).reduce((acc, b) => acc + (Number(b.km) || 0), 0),
+        long: acceptedBudgetsList.filter(b => b.km > 500).reduce((acc, b) => acc + (Number(b.km) || 0), 0),
       };
 
       const locationCounts: Record<string, number> = {};
-      realizedBudgets.forEach(b => {
+      acceptedBudgetsList.forEach(b => {
         if (b.destination) {
           locationCounts[b.destination] = (locationCounts[b.destination] || 0) + 1;
         }
@@ -64,28 +90,62 @@ export default function Dashboard() {
       const heatmapData = Object.entries(locationCounts)
         .map(([location, value]) => ({ location, value }))
         .sort((a, b) => b.value - a.value)
-        .slice(0, 5); // Top 5 destinations
+        .slice(0, 5);
 
-      // If no realized budgets, show some empty or default state
-      if (totalTrips === 0) {
+      const unitStats: Record<string, { trips: number, totalKm: number, totalRevenue: number }> = {};
+      acceptedBudgetsList.forEach(b => {
+        const unit = b.unitType || 'Desconocido';
+        if (!unitStats[unit]) {
+          unitStats[unit] = { trips: 0, totalKm: 0, totalRevenue: 0 };
+        }
+        unitStats[unit].trips += 1;
+        unitStats[unit].totalKm += (Number(b.km) || 0);
+        unitStats[unit].totalRevenue += (Number(b.finalPrice) || 0);
+      });
+
+      const unitMetrics = Object.entries(unitStats).map(([unitType, stats]) => {
+        const avgPricePerKm = stats.totalKm > 0 ? stats.totalRevenue / stats.totalKm : 0;
+        let formattedUnitType = unitType;
+        if (unitType === '19') formattedUnitType = 'Sprinter 19';
+        else if (unitType === '24') formattedUnitType = '24 Asientos';
+        else if (unitType === '44') formattedUnitType = '24-44 Asientos';
+        else if (unitType === '46') formattedUnitType = '46 Asientos';
+        else if (unitType === '60') formattedUnitType = '60 Asientos';
+
+        return {
+          unitType: formattedUnitType,
+          trips: stats.trips,
+          avgPricePerKm
+        };
+      }).sort((a, b) => b.trips - a.trips);
+
+      const recentBudgets = [...budgets]
+        .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+        .slice(0, 5);
+
+      if (budgets.length === 0) {
         setData({
-          totalTrips: 0,
-          totalKm: 0,
+          completedTrips: 0,
+          monthlyCompletedTripsRate: 0,
+          estimatedRevenue: 0,
+          monthlyRevenueRate: 0,
           totalPassengers: 0,
-          avgKmPerTrip: 0,
+          unitMetrics: [],
           tripTypes: { short: 0, medium: 0, long: 0 },
-          tripScopes: { provincial: 0, national: 0, international: 0 },
-          heatmapData: []
+          heatmapData: [],
+          recentBudgets: []
         });
       } else {
         setData({
-          totalTrips,
-          totalKm,
+          completedTrips,
+          monthlyCompletedTripsRate,
+          estimatedRevenue,
+          monthlyRevenueRate,
           totalPassengers,
-          avgKmPerTrip,
+          unitMetrics,
           tripTypes,
-          tripScopes,
-          heatmapData
+          heatmapData,
+          recentBudgets
         });
       }
       setLoading(false);
@@ -109,133 +169,203 @@ export default function Dashboard() {
     { name: 'Largos (> 500km)', value: data?.tripTypes?.long || 0 },
   ];
 
-  const tripScopeData = [
-    { name: 'Provincial', value: data?.tripScopes?.provincial || 0 },
-    { name: 'Nacional', value: data?.tripScopes?.national || 0 },
-    { name: 'Internacional', value: data?.tripScopes?.international || 0 },
-  ];
+  const formatCurrency = (val: number) => {
+    return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(val);
+  };
+
+  const formatCompactCurrency = (val: number) => {
+    if (val >= 1000000) {
+      return '$' + (val / 1000000).toFixed(1) + 'M';
+    }
+    if (val >= 1000) {
+      return '$' + (val / 1000).toFixed(0) + 'K';
+    }
+    return '$' + val;
+  };
+
+  const CHART_COLORS = ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Dashboard de Operaciones</h1>
-        <p className="text-slate-500 mt-1">Resumen general de viajes y métricas.</p>
+    <div className="-m-4 md:-m-8 p-4 md:p-8 bg-[#0f1117] min-h-[calc(100vh-64px)] md:min-h-screen text-white space-y-6 font-sans">
+      <div className="flex justify-between items-end">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Dashboard Ejecutivo</h1>
+          <p className="text-slate-400 mt-1">Resumen operativo de tu empresa</p>
+        </div>
+        <Link 
+          to="/cotizador"
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-medium py-2 px-4 rounded-xl transition-colors"
+        >
+          <FileText className="w-5 h-5" />
+          Nueva Cotización
+        </Link>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <KpiCard 
-          title="Viajes Realizados" 
-          value={(data?.totalTrips || 0).toLocaleString()} 
-          icon={Car} 
-          color="text-green-600" 
-          bg="bg-green-100" 
+          title="Viajes realizados" 
+          value={(data?.completedTrips || 0).toLocaleString()} 
+          icon={CheckCircle} 
+          color="text-emerald-400" 
+          bg="bg-emerald-500/20" 
+          trend={data?.monthlyCompletedTripsRate}
         />
         <KpiCard 
-          title="Kilómetros Totales" 
-          value={`${(data?.totalKm || 0).toLocaleString()} km`} 
-          icon={Route} 
-          color="text-emerald-600" 
-          bg="bg-emerald-100" 
+          title="Facturación estimada" 
+          value={formatCompactCurrency(data?.estimatedRevenue || 0)} 
+          icon={DollarSign} 
+          color="text-purple-400" 
+          bg="bg-purple-500/20" 
+          trend={data?.monthlyRevenueRate}
         />
         <KpiCard 
-          title="Pasajeros Transportados" 
+          title="Pasajeros transportados" 
           value={(data?.totalPassengers || 0).toLocaleString()} 
           icon={Users} 
-          color="text-amber-600" 
-          bg="bg-amber-100" 
-        />
-        <KpiCard 
-          title="Promedio por Viaje" 
-          value={`${Math.round(data?.avgKmPerTrip || 0).toLocaleString()} km`} 
-          icon={MapPin} 
-          color="text-red-600" 
-          bg="bg-red-100" 
+          color="text-orange-400" 
+          bg="bg-orange-500/20" 
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Unit Types Chart */}
+        <div className="bg-[#161920] p-6 rounded-2xl border border-[#222631] lg:col-span-2">
+          <h2 className="text-lg font-semibold text-white mb-6">KPI $/km según tipo de unidad</h2>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data.unitMetrics} margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#222631" />
+                <XAxis dataKey="unitType" stroke="#94a3b8" tick={{fill: '#94a3b8'}} />
+                <YAxis stroke="#94a3b8" tick={{fill: '#94a3b8'}} tickFormatter={(value) => `$${value}`} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#161920', borderColor: '#222631', color: '#fff' }}
+                  itemStyle={{ color: '#fff' }}
+                  formatter={(value: any) => [formatCurrency(value) + '/km', 'Relación $/km']}
+                  cursor={{ fill: '#222631' }}
+                />
+                <Bar dataKey="avgPricePerKm" name="Relación $/km" fill="#10b981" radius={[4, 4, 0, 0]} barSize={48} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
         {/* Trip Types Chart */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-          <h2 className="text-lg font-semibold text-slate-800 mb-4">Tipos de Viajes (Distancia)</h2>
-          <div className="h-72">
+        <div className="bg-[#161920] p-6 rounded-2xl border border-[#222631]">
+          <h2 className="text-lg font-semibold text-white mb-6">Distancia de viajes</h2>
+          <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={tripTypeData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
+                  innerRadius={70}
+                  outerRadius={110}
                   paddingAngle={5}
                   dataKey="value"
+                  stroke="none"
                 >
                   {tripTypeData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Trip Scopes Chart */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-          <h2 className="text-lg font-semibold text-slate-800 mb-4">Alcance de Viajes</h2>
-          <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={tripScopeData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {tripScopeData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[(index + 2) % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#161920', borderColor: '#222631', color: '#fff' }}
+                  itemStyle={{ color: '#fff' }}
+                  formatter={(value: any) => [`${value} km`, 'Distancia Total']}
+                />
+                <Legend wrapperStyle={{ color: '#94a3b8' }} />
               </PieChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Heatmap / Top Locations */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 lg:col-span-2">
-          <h2 className="text-lg font-semibold text-slate-800 mb-4">Destinos Frecuentes (Mapa de Calor)</h2>
-          <div className="h-80">
+        <div className="bg-[#161920] p-6 rounded-2xl border border-[#222631] lg:col-span-3">
+          <h2 className="text-lg font-semibold text-white mb-6">Destinos Frecuentes</h2>
+          <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={data.heatmapData} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                <XAxis type="number" />
-                <YAxis dataKey="location" type="category" width={100} />
-                <Tooltip />
-                <Bar dataKey="value" fill="#4f46e5" radius={[0, 4, 4, 0]} />
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#222631" />
+                <XAxis type="number" stroke="#94a3b8" tick={{fill: '#94a3b8'}} />
+                <YAxis dataKey="location" type="category" width={120} stroke="#94a3b8" tick={{fill: '#94a3b8'}} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#161920', borderColor: '#222631', color: '#fff' }}
+                  itemStyle={{ color: '#fff' }}
+                  formatter={(value: any) => [value, 'Viajes']}
+                />
+                <Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={24} />
               </BarChart>
             </ResponsiveContainer>
           </div>
+        </div>
+      </div>
+
+      {/* Recent Budgets */}
+      <div className="bg-[#161920] p-6 rounded-2xl border border-[#222631]">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-lg font-semibold text-white">Cotizaciones recientes</h2>
+          <Link to="/cotizaciones" className="text-sm font-medium text-blue-400 hover:text-blue-300 flex items-center gap-1">
+            Ver todas <ArrowUpRight className="w-4 h-4" />
+          </Link>
+        </div>
+        <div className="space-y-3">
+          {data.recentBudgets.map((budget, index) => (
+            <div key={index} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border border-[#222631] hover:border-slate-700 transition-all bg-[#1a1d24] gap-4">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-slate-800/50 rounded-lg text-slate-400 hidden sm:block">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="font-semibold text-white text-lg">{budget.client}</div>
+                  <div className="text-sm text-slate-400 mt-0.5">
+                    {budget.origen || 'Origen'} → {budget.destination}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto">
+                <div className={`flex items-center gap-1.5 text-sm font-medium ${
+                  budget.status === 'realizado' || budget.status === 'confirmado' ? 'text-emerald-400' :
+                  budget.status === 'cancelado' ? 'text-red-400' : 'text-amber-400'
+                }`}>
+                  {budget.status === 'realizado' || budget.status === 'confirmado' ? <CheckCircle className="w-4 h-4" /> :
+                   budget.status === 'cancelado' ? <XCircle className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
+                  <span className="capitalize">{budget.status}</span>
+                </div>
+                <div className="font-bold text-white text-lg sm:w-28 text-right">{formatCurrency(budget.finalPrice)}</div>
+              </div>
+            </div>
+          ))}
+          {data.recentBudgets.length === 0 && (
+            <div className="text-center py-8 text-slate-500">
+              No hay cotizaciones recientes.
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-function KpiCard({ title, value, icon: Icon, color, bg }: { title: string, value: string, icon: any, color: string, bg: string }) {
+function KpiCard({ title, value, subtitle, icon: Icon, color, bg, trend }: { title: string, value: string, subtitle?: string, icon: any, color: string, bg: string, trend?: number }) {
   return (
-    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
-      <div className={`p-4 rounded-xl ${bg} ${color}`}>
-        <Icon className="w-6 h-6" />
+    <div className="bg-[#161920] p-6 rounded-2xl border border-[#222631] flex flex-col relative">
+      <div className="flex justify-between items-start mb-4">
+        <div className={`p-3 rounded-xl ${bg} ${color}`}>
+          <Icon className="w-5 h-5" />
+        </div>
+        {trend !== undefined && (
+          <div className={`flex items-center text-sm font-medium ${trend >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+            {trend >= 0 ? <TrendingUp className="w-4 h-4 mr-1" /> : <TrendingDown className="w-4 h-4 mr-1" />}
+            {trend > 0 ? '+' : ''}{Math.abs(trend).toFixed(0)}%
+          </div>
+        )}
       </div>
       <div>
-        <p className="text-sm font-medium text-slate-500">{title}</p>
-        <p className="text-2xl font-bold text-slate-900">{value}</p>
+        <p className="text-3xl font-bold text-white mb-1">{value}</p>
+        <p className="text-sm font-medium text-slate-400">{title}</p>
+        {subtitle && <p className="text-xs text-slate-500 mt-1">{subtitle}</p>}
       </div>
     </div>
   );

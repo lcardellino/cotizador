@@ -1,11 +1,15 @@
 import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Calculator, History } from "lucide-react";
+import { LayoutDashboard, Calculator, FileText, Users, Calendar, Bus, ChevronLeft, ChevronRight, Menu, Bell } from "lucide-react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { useState, useEffect } from "react";
 
 import Dashboard from "./pages/Dashboard";
 import Cotizador from "./pages/Cotizador";
-import Historial from "./pages/Historial";
+import Cotizaciones from "./pages/Cotizaciones";
+import Clientes from "./pages/Clientes";
+import Agenda from "./pages/Agenda";
+import Vehiculos from "./pages/Vehiculos";
 
 import type { ReactNode } from "react";
 
@@ -13,55 +17,198 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-function Sidebar() {
+function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen }: { isCollapsed: boolean, setIsCollapsed: (val: boolean) => void, isMobileOpen: boolean, setIsMobileOpen: (val: boolean) => void }) {
   const location = useLocation();
   
   const navItems = [
     { path: "/", label: "Dashboard", icon: LayoutDashboard },
     { path: "/cotizador", label: "Cotizador", icon: Calculator },
-    { path: "/historial", label: "Historial", icon: History },
+    { path: "/clientes", label: "Clientes", icon: Users },
+    { path: "/cotizaciones", label: "Presupuestos", icon: FileText },
+    { path: "/agenda", label: "Agenda", icon: Calendar },
+    { path: "/vehiculos", label: "Vehículos", icon: Bus },
   ];
 
   return (
-    <div className="w-64 bg-green-900 text-green-100 flex flex-col h-full border-r border-green-800 print:hidden">
-      <div className="p-6">
-        <div className="bg-white p-3 rounded-xl mb-2 shadow-sm flex items-center justify-center min-h-[64px]">
-          <img src="/logo.png" alt="Grupo Fono Bus" className="max-h-12 object-contain" />
+    <>
+      {/* Mobile overlay */}
+      {isMobileOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 md:hidden transition-opacity"
+          onClick={() => setIsMobileOpen(false)}
+        />
+      )}
+      <div className={cn(
+        "fixed md:static inset-y-0 left-0 z-50 flex flex-col h-full bg-[#161920] text-slate-300 border-r border-[#222631] transition-all duration-300 ease-in-out print:hidden overflow-x-hidden",
+        isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
+        isCollapsed ? "md:w-20" : "md:w-64",
+        "w-64 shrink-0" // default width for mobile when open
+      )}>
+        <div className="p-4 flex items-center justify-between">
+          <div className={cn(
+            "bg-white rounded-xl shadow-sm flex items-center justify-center overflow-hidden transition-all duration-300",
+            isCollapsed ? "w-12 h-12 p-1 md:mx-auto" : "w-full p-3 min-h-[64px]"
+          )}>
+            <img 
+              src={isCollapsed ? "/logo fono solo.png" : "/logo.png"} 
+              alt="Grupo Fono Bus" 
+              className={cn(
+                "object-contain transition-all duration-300",
+                isCollapsed ? "max-h-8" : "max-h-12"
+              )} 
+            />
+          </div>
+        </div>
+        
+        <nav className="flex-1 px-3 space-y-2 mt-4 overflow-y-auto overflow-x-hidden">
+          {navItems.map((item) => {
+            const isActive = location.pathname === item.path;
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                onClick={() => setIsMobileOpen(false)}
+                title={isCollapsed ? item.label : undefined}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-3 rounded-lg transition-colors whitespace-nowrap relative",
+                  isActive 
+                    ? "bg-[#112a2e] text-[#2dd4bf]" 
+                    : "text-slate-400 hover:bg-[#1a1d24] hover:text-slate-200",
+                  isCollapsed ? "md:justify-center" : ""
+                )}
+              >
+                {isActive && (
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#2dd4bf] rounded-l-lg" />
+                )}
+                <item.icon className={cn("w-5 h-5 shrink-0", isActive ? "text-[#2dd4bf]" : "text-slate-400")} />
+                <span className={cn(
+                  "font-medium transition-all duration-300",
+                  isCollapsed ? "md:opacity-0 md:w-0 md:hidden" : "opacity-100 w-auto"
+                )}>
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Collapse Toggle Button (Desktop only) */}
+        <div className="p-4 hidden md:flex justify-end border-t border-[#222631]">
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="p-2 rounded-lg hover:bg-[#1a1d24] text-slate-400 hover:text-white transition-colors flex items-center justify-center w-full"
+          >
+            {isCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+          </button>
         </div>
       </div>
-      <nav className="flex-1 px-4 space-y-2">
-        {navItems.map((item) => {
-          const isActive = location.pathname === item.path;
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors",
-                isActive 
-                  ? "bg-green-700 text-white shadow-sm" 
-                  : "hover:bg-green-800 hover:text-white"
-              )}
-            >
-              <item.icon className="w-5 h-5" />
-              <span className="font-medium">{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
-    </div>
+    </>
   );
 }
 
 function Layout({ children }: { children: ReactNode }) {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [showAlerts, setShowAlerts] = useState(false);
+  const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
+
+  useEffect(() => {
+    const savedBudgetsStr = localStorage.getItem("savedBudgets");
+    if (savedBudgetsStr) {
+      try {
+        const parsed = JSON.parse(savedBudgetsStr);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const threeDaysFromNow = new Date(today);
+        threeDaysFromNow.setDate(today.getDate() + 3);
+
+        const upcoming = parsed.filter((b: any) => {
+          if (!b.date) return false;
+          // Assuming date is in YYYY-MM-DD format
+          const dateStringWithTime = b.date.includes('T') ? b.date : `${b.date}T00:00:00`;
+          const eventDate = new Date(dateStringWithTime);
+          return eventDate >= today && eventDate <= threeDaysFromNow && b.status === 'confirmado';
+        }).sort((a: any, b: any) => {
+          const dateA = new Date(a.date.includes('T') ? a.date : `${a.date}T00:00:00`).getTime();
+          const dateB = new Date(b.date.includes('T') ? b.date : `${b.date}T00:00:00`).getTime();
+          return dateA - dateB;
+        });
+
+        setUpcomingEvents(upcoming);
+      } catch (e) {
+        console.error("Error parsing saved budgets for alerts", e);
+      }
+    }
+  }, []);
+
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
-      <Sidebar />
-      <main className="flex-1 overflow-y-auto p-8">
-        <div className="max-w-7xl mx-auto">
+    <div className="flex h-screen bg-[#0f1117] overflow-hidden font-sans">
+      <Sidebar 
+        isCollapsed={isCollapsed} 
+        setIsCollapsed={setIsCollapsed}
+        isMobileOpen={isMobileOpen}
+        setIsMobileOpen={setIsMobileOpen}
+      />
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <header className="bg-[#161920] border-b border-[#222631] p-4 flex items-center justify-between shadow-sm z-30">
+          <div className="flex items-center">
+            <button 
+              onClick={() => setIsMobileOpen(true)} 
+              className="md:hidden p-2 -ml-2 text-slate-400 hover:bg-[#1a1d24] rounded-lg transition-colors"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+            <span className="md:hidden ml-4 font-semibold text-white">Grupo Fono Bus</span>
+          </div>
+          
+          <div className="flex items-center gap-4 relative ml-auto">
+            <button 
+              className="p-2 text-slate-400 hover:text-white hover:bg-[#222631] rounded-lg transition-colors relative"
+              onClick={() => setShowAlerts(!showAlerts)}
+            >
+              <Bell className="w-5 h-5" />
+              {upcomingEvents.length > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
+              )}
+            </button>
+
+            {showAlerts && (
+              <div className="absolute top-full right-0 mt-2 w-80 bg-[#161920] border border-[#222631] rounded-xl shadow-xl z-50 overflow-hidden">
+                <div className="p-3 border-b border-[#222631] bg-[#1a1d24]">
+                  <h3 className="text-sm font-semibold text-white">Próximos Eventos (3 días)</h3>
+                </div>
+                <div className="max-h-96 overflow-y-auto p-2 space-y-2">
+                  {upcomingEvents.length > 0 ? (
+                    upcomingEvents.map(event => (
+                      <div key={event.id} className="p-3 rounded-lg bg-[#0f1117] border border-[#222631]">
+                        <div className="flex justify-between items-start mb-1">
+                          <span className="text-sm font-medium text-white">{event.client}</span>
+                          <span className="text-xs text-slate-400">{event.date}</span>
+                        </div>
+                        <div className="text-xs text-slate-400 mb-2 truncate">{event.origen} → {event.destination}</div>
+                        <div className="flex justify-between items-center">
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${event.paymentStatus === 'pago' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}`}>
+                            {event.paymentStatus === 'pago' ? 'Pagado' : 'Falta Pagar'}
+                          </span>
+                          <span className="text-xs font-mono text-blue-400">{event.budgetNumber}</span>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-4 text-center text-sm text-slate-500">
+                      No hay eventos confirmados para los próximos 3 días.
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </header>
+        <main className="flex-1 overflow-y-auto p-4 md:p-6">
           {children}
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }
@@ -73,7 +220,10 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/cotizador" element={<Cotizador />} />
-          <Route path="/historial" element={<Historial />} />
+          <Route path="/cotizaciones" element={<Cotizaciones />} />
+          <Route path="/clientes" element={<Clientes />} />
+          <Route path="/agenda" element={<Agenda />} />
+          <Route path="/vehiculos" element={<Vehiculos />} />
         </Routes>
       </Layout>
     </BrowserRouter>

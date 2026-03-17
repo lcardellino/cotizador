@@ -27,6 +27,7 @@ const PdfExportTemplate = forwardRef<HTMLDivElement, PdfExportTemplateProps>((pr
     cliente,
     contacto,
     telefono,
+    mail,
     origen,
     destino,
     regresoA,
@@ -41,19 +42,22 @@ const PdfExportTemplate = forwardRef<HTMLDivElement, PdfExportTemplateProps>((pr
     finalTotal
   } = props;
 
+  const formatCurrencyNumber = (val: number) => {
+    return new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
+  };
+
   const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(val);
+    return '$' + formatCurrencyNumber(val);
   };
 
   const formatDate = (dateString: string) => {
     if (!dateString) return '';
     try {
-      // If it's just a date string like YYYY-MM-DD, we can just split it and reformat
       if (dateString.includes('-') && !dateString.includes('T')) {
         const [year, month, day] = dateString.split('-');
-        return `${day}/${month}/${year}`;
+        return `${parseInt(day)}/${parseInt(month)}/${year}`;
       }
-      return format(new Date(dateString), 'dd/MM/yyyy');
+      return format(new Date(dateString), 'd/M/yyyy');
     } catch (e) {
       return dateString;
     }
@@ -61,192 +65,217 @@ const PdfExportTemplate = forwardRef<HTMLDivElement, PdfExportTemplateProps>((pr
 
   const formatTime = (timeString: string) => {
     if (!timeString) return '';
-    return timeString; // It will already be in HH:mm format from type="time"
+    return timeString;
   };
 
-  const today = format(new Date(), 'dd/MM/yyyy');
+  const today = format(new Date(), 'd/M/yyyy');
 
   return (
-    <div style={{ position: 'absolute', top: '-10000px', left: '-10000px', width: '800px' }}>
+    <div className="pdf-export-template" style={{ position: 'absolute', top: '-10000px', left: '-10000px', width: '794px', minHeight: '1123px', backgroundColor: '#ffffff', boxSizing: 'border-box' }}>
       <div 
         ref={ref}
-        className="bg-white p-10 font-sans text-slate-800"
+        className="bg-[#ffffff] font-sans"
         style={{ 
-          width: '800px', 
-          minHeight: '1131px', // A4 ratio
+          width: '794px',
+          minHeight: '1123px',
+          padding: '40px 60px',
+          margin: '0 auto',
           backgroundColor: '#ffffff',
-          boxSizing: 'border-box'
+          boxSizing: 'border-box',
+          color: '#4b5563'
         }}
       >
         {/* Header */}
-      <div className="flex justify-between items-start mb-10 border-b-2 border-green-800 pb-6">
-        <div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">PRESUPUESTO</h1>
-          <div className="text-2xl font-bold text-green-700 mb-4">N° {correlativeNumber}</div>
-          <div className="text-xl text-slate-700 mb-6">Viaje Especial</div>
-          
-          <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">CLIENTE:</div>
-          <div className="text-xl font-semibold">{cliente || '-'}</div>
+        <div className="flex justify-between items-center mb-2">
+          <div>
+            <h1 className="text-4xl font-bold italic text-[#6b7280] tracking-tight mb-1">PRESUPUESTO</h1>
+            <div className="text-3xl font-bold text-[#15803d] mb-6">N° {correlativeNumber}</div>
+            
+            <div className="text-sm font-bold text-[#374151] uppercase mb-1">CLIENTE:</div>
+            <div className="text-lg text-[#374151]">{cliente || '-'}</div>
+          </div>
+          <div className="text-right flex flex-col items-end justify-center">
+            <img src="/logo.png" alt="Grupo Fono Bus" className="h-16 object-contain mb-1" />
+            <div className="text-[10px] font-bold text-[#374151] mb-2">EMPRENDIMIENTOS SRL.</div>
+            <div className="text-xs text-[#6b7280] space-y-1">
+              <div>Dirección: Sierras Grandes 21 - B° Yapeyú - Córdoba.</div>
+              <div>Correo: viajesespeciales@grupofonobus.com.ar</div>
+              <div>Telefono: 351-6617222</div>
+            </div>
+          </div>
         </div>
         
-        <div className="text-right flex flex-col items-end">
-          <div className="flex items-center justify-end mb-4">
-            <img src="/logo.svg" alt="Grupo Fono Bus" className="h-12 object-contain" />
-          </div>
-          <div className="text-sm text-slate-600 space-y-1">
-            <div>Sierras Grandes 21</div>
-            <div>B° Yapeyu - Córdoba</div>
-            <div className="text-green-700 font-medium">viajesespeciales@grupofonobus.com.ar</div>
-            <div className="font-bold text-slate-800">Tel: 351-6617222</div>
-          </div>
-        </div>
-      </div>
+        <div className="border-b-2 border-[#15803d] mb-6"></div>
 
-      {/* Contact Info */}
-      <div className="flex justify-between items-end mb-8">
-        <div className="space-y-4 w-1/2">
-          <div className="flex items-end gap-2 border-b border-slate-300 pb-1">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider w-24">CONTACTO:</span>
-            <span className="text-lg">{contacto || '-'}</span>
+        {/* Contact Info */}
+        <div className="grid grid-cols-2 gap-4 mb-6 text-xs text-[#374151]">
+          <div className="flex items-center gap-2">
+            <span className="font-bold uppercase w-24">CONTACTO:</span>
+            <span>{contacto || '-'}</span>
           </div>
-          <div className="flex items-end gap-2 border-b border-slate-300 pb-1">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider w-24">TELÉFONO:</span>
-            <span className="text-lg">{telefono || '-'}</span>
+          <div className="flex items-center gap-2">
+            <span className="font-bold uppercase w-24">FECHA:</span>
+            <span>{today}</span>
           </div>
-        </div>
-        <div className="flex items-end gap-2 border-b border-slate-300 pb-1 w-48">
-          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">FECHA:</span>
-          <span className="text-lg text-right flex-1">{today}</span>
-        </div>
-      </div>
-
-      {/* Trip Conditions */}
-      <div className="bg-slate-50 rounded-xl p-6 mb-8 border border-slate-100">
-        <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-6">CONDICIONES DEL VIAJE</h3>
-        
-        <div className="grid grid-cols-2 gap-y-4 gap-x-8 mb-8">
-          <div className="flex items-center gap-3">
-            <div className="text-green-600">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-            </div>
-            <span className="text-xs font-bold text-slate-500 uppercase w-28">FECHA SALIDA:</span>
-            <span className="font-medium">{formatDate(fechaSalida) || '-'}</span>
+          <div className="flex items-center gap-2">
+            <span className="font-bold uppercase w-24">TELEFONO:</span>
+            <span>{telefono || '-'}</span>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="text-green-600">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            </div>
-            <span className="text-xs font-bold text-slate-500 uppercase w-28">HORA SALIDA:</span>
-            <span className="font-medium">{formatTime(horaSalida) || '-'}</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="text-green-600">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-            </div>
-            <span className="text-xs font-bold text-slate-500 uppercase w-28">FECHA REGRESO:</span>
-            <span className="font-medium">{formatDate(fechaRegreso) || '-'}</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="text-green-600">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            </div>
-            <span className="text-xs font-bold text-slate-500 uppercase w-28">HORA REGRESO:</span>
-            <span className="font-medium">{formatTime(horaRegreso) || '-'}</span>
+          <div className="flex items-center gap-2">
+            <span className="font-bold uppercase w-24">EMAIL:</span>
+            <span>{mail || '-'}</span>
           </div>
         </div>
 
-        <div className="flex items-center justify-between bg-white p-4 rounded-lg border border-slate-100">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+        {/* Condiciones del Viaje */}
+        <div className="bg-[#c1e1c5] px-2 py-1 mb-4">
+          <h3 className="text-xs font-bold text-[#374151] uppercase">CONDICIONES DEL VIAJE</h3>
+        </div>
+
+        <div className="grid grid-cols-2 gap-x-12 gap-y-2 mb-8 text-xs">
+          <div className="flex items-center">
+            <div className="bg-[#c1e1c5] px-2 py-1 font-bold text-[#374151] w-32 border border-[#c1e1c5]">FECHA SALIDA:</div>
+            <div className="px-2 py-1 border border-[#d1d5db] flex-1 text-center bg-white">{formatDate(fechaSalida) || '-'}</div>
+          </div>
+          <div className="flex items-center">
+            <div className="bg-[#c1e1c5] px-2 py-1 font-bold text-[#374151] w-32 border border-[#c1e1c5]">HORA SALIDA:</div>
+            <div className="px-2 py-1 border border-[#d1d5db] flex-1 text-center bg-white">{formatTime(horaSalida) || '-'}</div>
+          </div>
+          <div className="flex items-center">
+            <div className="bg-[#c1e1c5] px-2 py-1 font-bold text-[#374151] w-32 border border-[#c1e1c5]">FECHA REGRESO:</div>
+            <div className="px-2 py-1 border border-[#d1d5db] flex-1 text-center bg-white">{formatDate(fechaRegreso) || '-'}</div>
+          </div>
+          <div className="flex items-center">
+            <div className="bg-[#c1e1c5] px-2 py-1 font-bold text-[#374151] w-32 border border-[#c1e1c5]">HORA REGRESO:</div>
+            <div className="px-2 py-1 border border-[#d1d5db] flex-1 text-center bg-white">{formatTime(horaRegreso) || '-'}</div>
+          </div>
+        </div>
+
+        {/* Locations */}
+        <div className="flex items-center justify-between mb-8 px-4">
+          <div className="flex flex-col gap-6 w-5/12">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-[#dcfce7] flex items-center justify-center text-[#16a34a] shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+              </div>
+              <div className="flex flex-col justify-center">
+                <div className="text-[10px] font-bold text-[#6b7280] uppercase">ORIGEN</div>
+                <div className="text-base font-semibold text-[#374151]">{origen || '-'}</div>
+              </div>
             </div>
-            <div>
-              <div className="text-[10px] font-bold text-slate-500 uppercase">ORIGEN</div>
-              <div className="font-semibold text-slate-900">{origen || '-'}</div>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-[#fef3c7] flex items-center justify-center text-[#d97706] shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+              </div>
+              <div className="flex flex-col justify-center">
+                <div className="text-[10px] font-bold text-[#6b7280] uppercase">REGRESO A</div>
+                <div className="text-base font-semibold text-[#374151]">{regresoA || '-'}</div>
+              </div>
             </div>
           </div>
           
-          <div className="text-slate-300">
+          <div className="text-[#cbd5e1] w-2/12 flex justify-center items-center">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+          <div className="flex items-center gap-3 w-5/12">
+            <div className="w-8 h-8 rounded-full bg-[#dbeafe] flex items-center justify-center text-[#2563eb] shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
             </div>
-            <div>
-              <div className="text-[10px] font-bold text-slate-500 uppercase">DESTINO</div>
-              <div className="font-semibold text-slate-900">{destino || '-'}</div>
-            </div>
-          </div>
-
-          <div className="text-slate-300">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-            </div>
-            <div>
-              <div className="text-[10px] font-bold text-slate-500 uppercase">REGRESO A</div>
-              <div className="font-semibold text-slate-900">{regresoA || '-'}</div>
+            <div className="flex flex-col justify-center">
+              <div className="text-[10px] font-bold text-[#6b7280] uppercase">DESTINO</div>
+              <div className="text-base font-semibold text-[#374151]">{destino || '-'}</div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Table */}
-      <table className="w-full mb-8 border-collapse">
-        <thead>
-          <tr className="bg-slate-200">
-            <th className="text-left py-3 px-4 text-xs font-bold text-slate-700 uppercase tracking-wider border border-slate-300">DESCRIPCIÓN DEL SERVICIO</th>
-            <th className="text-center py-3 px-4 text-xs font-bold text-slate-700 uppercase tracking-wider border border-slate-300 w-32">CANTIDAD</th>
-            <th className="text-right py-3 px-4 text-xs font-bold text-slate-700 uppercase tracking-wider border border-slate-300 w-48">TOTAL</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td className="py-4 px-4 border border-slate-300 text-slate-800">{descripcion || 'Traslado especial'}</td>
-            <td className="py-4 px-4 border border-slate-300 text-center text-slate-800">1</td>
-            <td className="py-4 px-4 border border-slate-300 text-right font-medium text-slate-800">{formatCurrency(finalTotal)}</td>
-          </tr>
-        </tbody>
-      </table>
+        {/* Table */}
+        <div className="border-t-2 border-b-2 border-[#15803d] mb-4">
+          <table className="w-full text-sm" style={{ tableLayout: 'fixed' }}>
+            <thead>
+              <tr>
+                <th className="text-left py-2 px-2 font-bold text-[#374151] uppercase w-1/2 align-middle">DESCRIPCION DEL SERVICIO</th>
+                <th className="text-center py-2 px-2 font-bold text-[#374151] uppercase w-1/6 align-middle">PRECIO</th>
+                <th className="text-center py-2 px-2 font-bold text-[#374151] uppercase w-1/6 align-middle">CANT.</th>
+                <th className="text-right py-2 px-2 font-bold text-[#374151] uppercase w-1/6 align-middle">TOTAL</th>
+              </tr>
+            </thead>
+          </table>
+        </div>
+        
+        <table className="w-full text-sm mb-12" style={{ tableLayout: 'fixed' }}>
+          <tbody>
+            <tr>
+              <td className="py-2 px-2 text-[#6b7280] w-1/2 align-middle">{descripcion || 'Traslado privado'}</td>
+              <td className="py-2 px-2 text-center text-[#6b7280] w-1/6 align-middle">
+                <div className="flex justify-between"><span>$</span><span>{formatCurrencyNumber(finalTotal)}</span></div>
+              </td>
+              <td className="py-2 px-2 text-center text-[#6b7280] w-1/6 align-middle">1</td>
+              <td className="py-2 px-2 text-right text-[#6b7280] w-1/6 align-middle">
+                <div className="flex justify-between"><span>$</span><span>{formatCurrencyNumber(finalTotal)}</span></div>
+              </td>
+            </tr>
+            <tr>
+              <td className="py-2 px-2 text-[#6b7280] w-1/2 align-middle"></td>
+              <td className="py-2 px-2 text-center text-[#6b7280] w-1/6 align-middle">
+                <div className="flex justify-between"><span>$</span><span>-</span></div>
+              </td>
+              <td className="py-2 px-2 text-center text-[#6b7280] w-1/6 align-middle">0</td>
+              <td className="py-2 px-2 text-right text-[#6b7280] w-1/6 align-middle">
+                <div className="flex justify-between"><span>$</span><span>-</span></div>
+              </td>
+            </tr>
+            <tr>
+              <td className="py-2 px-2 text-[#6b7280] w-1/2 align-middle"></td>
+              <td className="py-2 px-2 text-center text-[#6b7280] w-1/6 align-middle">
+                <div className="flex justify-between"><span>$</span><span>-</span></div>
+              </td>
+              <td className="py-2 px-2 text-center text-[#6b7280] w-1/6 align-middle">0</td>
+              <td className="py-2 px-2 text-right text-[#6b7280] w-1/6 align-middle">
+                <div className="flex justify-between"><span>$</span><span>-</span></div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
 
-      {/* Totals */}
-      <div className="flex justify-end mb-12">
-        <div className="w-80 space-y-3">
-          <div className="flex justify-between items-center text-slate-600">
-            <span>Cantidad de pasajeros:</span>
-            <span className="font-medium text-slate-800">{passengers}</span>
+        {/* Totals */}
+        <div className="flex justify-between items-center mb-12">
+          <div className="flex items-center gap-4 text-sm">
+            <span className="text-[#6b7280]">Cantidad de pasajeros</span>
+            <span className="text-[#dc2626] font-medium">{passengers}</span>
           </div>
-          <div className="flex justify-between items-center text-slate-600">
-            <span>SUB.TOTAL:</span>
-            <span className="font-medium text-slate-800">{formatCurrency(subtotal)}</span>
-          </div>
-          <div className="flex justify-between items-center text-slate-600">
-            <span>IVA (10.5%):</span>
-            <span className="font-medium text-slate-800">{formatCurrency(ivaAmount)}</span>
-          </div>
-          <div className="flex justify-between items-center bg-green-100 border-2 border-green-600 p-3 rounded-lg mt-4">
-            <span className="font-bold text-green-800">TOTAL (Iva incl):</span>
-            <span className="font-bold text-xl text-green-800">{formatCurrency(finalTotal)}</span>
+          
+          <div className="w-64 space-y-2 text-sm">
+            <div className="flex justify-between items-center font-bold text-[#374151] px-2">
+              <span>SUB.TOTAL:</span>
+              <span>{formatCurrency(subtotal)}</span>
+            </div>
+            <div className="flex justify-between items-center font-bold text-[#374151] px-2">
+              <span>DESC.: (%)</span>
+              <span>0,0%</span>
+            </div>
+            <div className="flex justify-between items-center font-bold text-[#374151] bg-[#c1e1c5] px-2 py-1 -mx-2">
+              <span>TOTAL (iva incl):</span>
+              <span>{formatCurrency(finalTotal)}</span>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Footer Notes */}
-      <div className="bg-green-50 p-6 rounded-xl text-center mb-8">
-        <div className="font-medium text-green-800 mb-2">La cotización tiene una validez de 15 días.</div>
-        <div className="font-medium text-green-800">Tarifas y disponibilidad sujetas a confirmación</div>
-      </div>
+        {/* Footer Notes */}
+        <div className="space-y-1 mb-8">
+          <div className="bg-[#c1e1c5] border border-[#15803d] py-1 flex justify-center items-center">
+            <span className="font-bold italic text-[#374151]">La cotización tiene una validez de 15 días.</span>
+          </div>
+          <div className="bg-[#c1e1c5] border border-[#15803d] py-1 flex justify-center items-center">
+            <span className="font-bold italic text-[#374151]">Tarifas y disponibilidad sujetas a confirmación</span>
+          </div>
+        </div>
 
-      <div className="text-xs text-slate-500 space-y-2 border-t border-slate-200 pt-6">
-        <p><strong className="text-slate-700">IMPORTANTE:</strong> LOS VIAJES DEBERÁN SER ABONADOS CON UN MÍNIMO DE 72 hs ANTES DE LA FECHA PACTADA.</p>
-        <p>LA FORMA DE PAGO ES MEDIANTE DEPÓSITO BANCARIO, EL CUAL SE DEBERÁ ENVIAR COMPROBANTE DE PAGO POR CORREO ELECTRÓNICO Y/O WHATSAPP AL NÚMERO 351-6617222</p>
+        <div className="text-[10px] text-[#6b7280] italic space-y-1">
+          <p>IMPORTANTE: LOS VIAJES DEBERAN SER ABONADOS CON UN MINIMO DE 72 hs ANTES DE LA FECHA PACTADA.</p>
+          <p>LA FORMA DE PAGO ES MEDIANTE DEPOSITO BANCARIO, EL CUAL SE DEBERA ENVIAR COMPROBANTE DE PAGO POR CORREO ELECTRONICO Y/O WHATSAPP AL NUMERO 351-6617222</p>
+        </div>
       </div>
-    </div>
     </div>
   );
 });
