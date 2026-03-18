@@ -20,13 +20,14 @@ import { ChevronLeft, ChevronRight, AlertTriangle, CheckCircle, Clock, Calendar 
 import { SavedBudget } from "../types";
 
 export default function Agenda() {
+  const currentUser = localStorage.getItem("currentUser") || "lucas";
   const [currentDate, setCurrentDate] = useState(new Date());
   const [budgets, setBudgets] = useState<SavedBudget[]>([]);
   const [selectedBudget, setSelectedBudget] = useState<SavedBudget | null>(null);
 
   useEffect(() => {
     const loadBudgets = () => {
-      const savedBudgetsStr = localStorage.getItem("savedBudgets");
+      const savedBudgetsStr = localStorage.getItem(`savedBudgets_${currentUser}`);
       if (savedBudgetsStr) {
         try {
           const parsed = JSON.parse(savedBudgetsStr);

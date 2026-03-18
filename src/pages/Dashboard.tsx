@@ -35,12 +35,13 @@ interface DashboardData {
 const COLORS = ['#16a34a', '#dc2626', '#f59e0b', '#2563eb', '#8b5cf6'];
 
 export default function Dashboard() {
+  const currentUser = localStorage.getItem("currentUser") || "lucas";
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     try {
-      const savedBudgetsStr = localStorage.getItem("savedBudgets");
+      const savedBudgetsStr = localStorage.getItem(`savedBudgets_${currentUser}`);
       const budgets: any[] = savedBudgetsStr ? JSON.parse(savedBudgetsStr) : [];
       
       const now = new Date();

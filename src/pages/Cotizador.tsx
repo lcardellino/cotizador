@@ -48,6 +48,7 @@ const formatCurrency = (val: number) => {
 };
 
 export default function Cotizador() {
+  const currentUser = localStorage.getItem("currentUser") || "lucas";
   // Datos del Cliente y Viaje
   const [cliente, setCliente] = useState("");
   const [contacto, setContacto] = useState("");
@@ -189,11 +190,11 @@ export default function Cotizador() {
   };
 
   useEffect(() => {
-    const existingBudgetsStr = localStorage.getItem('savedBudgets');
+    const existingBudgetsStr = localStorage.getItem(`savedBudgets_${currentUser}`);
     if (existingBudgetsStr) {
       setSavedBudgets(JSON.parse(existingBudgetsStr));
     }
-  }, []);
+  }, [currentUser]);
 
   useEffect(() => {
     if (location.state?.budgetToLoad) {
@@ -381,20 +382,20 @@ export default function Cotizador() {
         profitMultiplier,
       };
 
-      const existingBudgetsStr = localStorage.getItem('savedBudgets');
+      const existingBudgetsStr = localStorage.getItem(`savedBudgets_${currentUser}`);
       let existingBudgets: SavedBudget[] = existingBudgetsStr ? JSON.parse(existingBudgetsStr) : [];
       
       if (editingId) {
         // Update existing budget
         existingBudgets = existingBudgets.map(b => b.id === editingId ? newBudget : b);
-        localStorage.setItem('savedBudgets', JSON.stringify(existingBudgets));
+        localStorage.setItem(`savedBudgets_${currentUser}`, JSON.stringify(existingBudgets));
         setSavedBudgets(existingBudgets);
         setToastMessage({ title: 'Cotización actualizada exitosamente.', type: 'success' });
         setTimeout(() => setToastMessage(null), 3000);
       } else {
         // Create new budget
         const updatedBudgets = [newBudget, ...existingBudgets];
-        localStorage.setItem('savedBudgets', JSON.stringify(updatedBudgets));
+        localStorage.setItem(`savedBudgets_${currentUser}`, JSON.stringify(updatedBudgets));
         setSavedBudgets(updatedBudgets);
         
         // Increment correlative number since we used it

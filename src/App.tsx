@@ -47,7 +47,7 @@ function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen }:
       )}>
         <div className="p-4 flex items-center justify-between">
           <div className={cn(
-            "bg-white rounded-xl shadow-sm flex items-center justify-center overflow-hidden transition-all duration-300",
+            "bg-transparent flex items-center justify-center overflow-hidden transition-all duration-300",
             isCollapsed ? "w-12 h-12 p-1 md:mx-auto" : "w-full p-3 min-h-[64px]"
           )}>
             <img 
@@ -113,8 +113,10 @@ function Layout({ children, onLogout }: { children: ReactNode, onLogout: () => v
   const [showAlerts, setShowAlerts] = useState(false);
   const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
 
+  const currentUser = localStorage.getItem("currentUser") || "lucas";
+
   useEffect(() => {
-    const savedBudgetsStr = localStorage.getItem("savedBudgets");
+    const savedBudgetsStr = localStorage.getItem(`savedBudgets_${currentUser}`);
     if (savedBudgetsStr) {
       try {
         const parsed = JSON.parse(savedBudgetsStr);
@@ -225,15 +227,30 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return localStorage.getItem("isAuthenticated") === "true";
   });
+  const [currentUser, setCurrentUser] = useState(() => {
+    return localStorage.getItem("currentUser") || "";
+  });
 
-  const handleLogin = () => {
+  const handleLogin = (username: string) => {
     setIsAuthenticated(true);
+    setCurrentUser(username);
     localStorage.setItem("isAuthenticated", "true");
+    localStorage.setItem("currentUser", username);
+
+    // Migrate old budgets if they exist and the user's specific storage is empty
+    const oldBudgets = localStorage.getItem("savedBudgets");
+    const userBudgets = localStorage.getItem(`savedBudgets_${username}`);
+    
+    if (oldBudgets && !userBudgets) {
+      localStorage.setItem(`savedBudgets_${username}`, oldBudgets);
+    }
   };
 
   const handleLogout = () => {
     setIsAuthenticated(false);
+    setCurrentUser("");
     localStorage.removeItem("isAuthenticated");
+    localStorage.removeItem("currentUser");
   };
 
   return (

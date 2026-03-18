@@ -7,6 +7,7 @@ import { SavedBudget, BudgetStatus, TripType, PaymentStatus } from "../types";
 import PdfExportTemplate from "../components/PdfExportTemplate";
 
 export default function Cotizaciones() {
+  const currentUser = localStorage.getItem("currentUser") || "lucas";
   const [budgets, setBudgets] = useState<SavedBudget[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("todas");
@@ -18,7 +19,7 @@ export default function Cotizaciones() {
 
   useEffect(() => {
     const loadBudgets = () => {
-      const savedBudgetsStr = localStorage.getItem("savedBudgets");
+      const savedBudgetsStr = localStorage.getItem(`savedBudgets_${currentUser}`);
       if (savedBudgetsStr) {
         try {
           const parsed = JSON.parse(savedBudgetsStr);
@@ -34,19 +35,19 @@ export default function Cotizaciones() {
   const handleStatusChange = (id: string, newStatus: BudgetStatus) => {
     const updatedBudgets = budgets.map(b => b.id === id ? { ...b, status: newStatus } : b);
     setBudgets(updatedBudgets);
-    localStorage.setItem("savedBudgets", JSON.stringify(updatedBudgets));
+    localStorage.setItem(`savedBudgets_${currentUser}`, JSON.stringify(updatedBudgets));
   };
 
   const handlePaymentStatusChange = (id: string, newStatus: PaymentStatus) => {
     const updatedBudgets = budgets.map(b => b.id === id ? { ...b, paymentStatus: newStatus } : b);
     setBudgets(updatedBudgets);
-    localStorage.setItem("savedBudgets", JSON.stringify(updatedBudgets));
+    localStorage.setItem(`savedBudgets_${currentUser}`, JSON.stringify(updatedBudgets));
   };
 
   const handleTripTypeChange = (id: string, newType: TripType) => {
     const updatedBudgets = budgets.map(b => b.id === id ? { ...b, tripType: newType } : b);
     setBudgets(updatedBudgets);
-    localStorage.setItem("savedBudgets", JSON.stringify(updatedBudgets));
+    localStorage.setItem(`savedBudgets_${currentUser}`, JSON.stringify(updatedBudgets));
   };
 
   const handleDelete = (id: string) => {
@@ -57,7 +58,7 @@ export default function Cotizaciones() {
     if (deleteConfirmId) {
       const updatedBudgets = budgets.filter((b) => b.id !== deleteConfirmId);
       setBudgets(updatedBudgets);
-      localStorage.setItem("savedBudgets", JSON.stringify(updatedBudgets));
+      localStorage.setItem(`savedBudgets_${currentUser}`, JSON.stringify(updatedBudgets));
       setDeleteConfirmId(null);
     }
   };
@@ -228,6 +229,7 @@ export default function Cotizaciones() {
             <thead className="text-xs text-slate-400 border-b border-[#222631] bg-[#1a1d24]">
               <tr>
                 <th className="px-6 py-4 font-medium whitespace-nowrap">N° Cotización</th>
+                <th className="px-6 py-4 font-medium whitespace-nowrap">Fecha de Viaje</th>
                 <th className="px-6 py-4 font-medium whitespace-nowrap">Cliente</th>
                 <th className="px-6 py-4 font-medium min-w-[250px]">Ruta</th>
                 <th className="px-6 py-4 font-medium whitespace-nowrap">Unidad</th>
@@ -254,6 +256,9 @@ export default function Cotizaciones() {
                         ${budget.status === 'cancelado' ? 'text-red-400' : ''}
                       `}>
                         {budget.budgetNumber}
+                      </td>
+                      <td className="px-6 py-4 text-slate-300 whitespace-nowrap">
+                        {budget.date ? format(new Date(budget.date + 'T00:00:00'), 'dd/MM/yyyy') : '-'}
                       </td>
                       <td className="px-6 py-4 font-bold text-white whitespace-nowrap">
                         {budget.client}
