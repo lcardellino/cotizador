@@ -353,6 +353,10 @@ export default function Cotizador() {
         descripcion: descripcion || "",
         subtotal: calculations.subtotal,
         ivaAmount: calculations.ivaAmount,
+        carCost: calculations.carCost,
+        depreciationCost: calculations.depreciationCost,
+        totalDriverCost: calculations.totalDriverCost,
+        dirtRoadCost: calculations.dirtRoadCost,
         
         // Full state fields
         kmProductivos,

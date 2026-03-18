@@ -12,6 +12,9 @@ interface DashboardData {
   estimatedRevenue: number;
   monthlyRevenueRate: number;
   totalPassengers: number;
+  profitMargin: number;
+  totalVehicleCost: number;
+  totalDriverCost: number;
 
   unitMetrics: {
     unitType: string;
@@ -26,6 +29,7 @@ interface DashboardData {
   };
   heatmapData: { location: string; value: number }[];
   recentBudgets: any[];
+  revenueVsCostData: { month: string; revenue: number; costs: number }[];
 }
 
 const COLORS = ['#16a34a', '#dc2626', '#f59e0b', '#2563eb', '#8b5cf6'];
@@ -73,6 +77,82 @@ export default function Dashboard() {
       const monthlyRevenueRate = lastMonthRevenue === 0 ? 100 : ((currentMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100;
 
       const totalPassengers = acceptedBudgetsList.reduce((acc, b) => acc + (Number(b.passengers) || 0), 0);
+
+      const UNIT_SPECS: Record<string, { consumption: number; depreciation: number }> = {
+        "19": { consumption: 8, depreciation: 200 },
+        "24": { consumption: 3.5, depreciation: 400 },
+        "44": { consumption: 3.5, depreciation: 400 },
+        "46": { consumption: 3.5, depreciation: 400 },
+        "60": { consumption: 3.5, depreciation: 800 },
+      };
+
+      let totalVehicleCost = 0;
+      let totalDriverCost = 0;
+      let totalProfit = 0;
+
+      const monthlyData: Record<string, { revenue: number; costs: number }> = {};
+
+      acceptedBudgetsList.forEach(b => {
+        let bVehicleCost = 0;
+        let bDriverCost = 0;
+
+        if (b.carCost !== undefined) {
+          bVehicleCost = (Number(b.carCost) || 0) + (Number(b.depreciationCost) || 0) + (Number(b.dirtRoadCost) || 0);
+          bDriverCost = (Number(b.totalDriverCost) || 0);
+        } else {
+          // Recalculate for older budgets
+          const totalKm = (Number(b.kmProductivos) || 0) + (Number(b.kmDestino) || 0) + (Number(b.kmImproductivos) || 0);
+          const specs = UNIT_SPECS[b.unitType || "19"] || { consumption: 8, depreciation: 200 };
+          const litersNeeded = specs.consumption > 0 ? totalKm / specs.consumption : 0;
+          const carCost = litersNeeded * (Number(b.dieselPrice) || 1000) * (Number(b.busCount) || 1);
+          const depreciationCost = totalKm * specs.depreciation * (Number(b.busCount) || 1);
+          
+          let baseDriverCost = 0;
+          if (b.driverServiceType === "provincial") {
+            baseDriverCost = 
+              ((b.driverShift?.value || 0) * (b.driverShift?.count || 0)) + 
+              ((b.driverViatico?.value || 0) * (b.driverViatico?.count || 0)) + 
+              ((b.driverTomeDeje?.value || 0) * (b.driverTomeDeje?.count || 0)) + 
+              ((b.driverExtraHour?.value || 0) * (b.driverExtraHour?.count || 0)) + 
+              ((b.driverBed?.value || 0) * (b.driverBed?.count || 0));
+          } else {
+            baseDriverCost = 
+              ((b.natBreakfast?.value || 0) * (b.natBreakfast?.count || 0)) + 
+              ((b.natLunch?.value || 0) * (b.natLunch?.count || 0)) + 
+              ((b.natSnack?.value || 0) * (b.natSnack?.count || 0)) + 
+              ((b.natDinner?.value || 0) * (b.natDinner?.count || 0)) + 
+              ((b.natBed?.value || 0) * (b.natBed?.count || 0));
+          }
+          const driverCost = baseDriverCost * (Number(b.driverCount) || 1);
+          const baseCosts = carCost + depreciationCost + driverCost;
+          const dirtRoadCost = baseCosts * ((Number(b.dirtRoadPercent) || 0) / 100);
+
+          bVehicleCost = carCost + depreciationCost + dirtRoadCost;
+          bDriverCost = driverCost;
+        }
+
+        totalVehicleCost += bVehicleCost;
+        totalDriverCost += bDriverCost;
+        totalProfit += (Number(b.profit) || 0);
+
+        // Group by month for chart
+        if (b.date) {
+          const d = new Date(b.date + 'T00:00:00');
+          const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+          if (!monthlyData[monthKey]) {
+            monthlyData[monthKey] = { revenue: 0, costs: 0 };
+          }
+          monthlyData[monthKey].revenue += (Number(b.finalPrice) || 0);
+          monthlyData[monthKey].costs += (bVehicleCost + bDriverCost);
+        }
+      });
+
+      const profitMargin = estimatedRevenue > 0 ? (totalProfit / estimatedRevenue) * 100 : 0;
+
+      const revenueVsCostData = Object.entries(monthlyData)
+        .map(([month, data]) => ({ month, ...data }))
+        .sort((a, b) => a.month.localeCompare(b.month))
+        .slice(-6); // Last 6 months
 
       const tripTypes = {
         short: acceptedBudgetsList.filter(b => b.km < 100).reduce((acc, b) => acc + (Number(b.km) || 0), 0),
@@ -130,10 +210,14 @@ export default function Dashboard() {
           estimatedRevenue: 0,
           monthlyRevenueRate: 0,
           totalPassengers: 0,
+          profitMargin: 0,
+          totalVehicleCost: 0,
+          totalDriverCost: 0,
           unitMetrics: [],
           tripTypes: { short: 0, medium: 0, long: 0 },
           heatmapData: [],
-          recentBudgets: []
+          recentBudgets: [],
+          revenueVsCostData: []
         });
       } else {
         setData({
@@ -142,10 +226,14 @@ export default function Dashboard() {
           estimatedRevenue,
           monthlyRevenueRate,
           totalPassengers,
+          profitMargin,
+          totalVehicleCost,
+          totalDriverCost,
           unitMetrics,
           tripTypes,
           heatmapData,
-          recentBudgets
+          recentBudgets,
+          revenueVsCostData
         });
       }
       setLoading(false);
@@ -202,7 +290,7 @@ export default function Dashboard() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <KpiCard 
           title="Viajes realizados" 
           value={(data?.completedTrips || 0).toLocaleString()} 
@@ -220,6 +308,27 @@ export default function Dashboard() {
           trend={data?.monthlyRevenueRate}
         />
         <KpiCard 
+          title="Margen de ganancias" 
+          value={`${(data?.profitMargin || 0).toFixed(1)}%`} 
+          icon={TrendingUp} 
+          color="text-blue-400" 
+          bg="bg-blue-500/20" 
+        />
+        <KpiCard 
+          title="Costos vehículo" 
+          value={formatCompactCurrency(data?.totalVehicleCost || 0)} 
+          icon={Car} 
+          color="text-rose-400" 
+          bg="bg-rose-500/20" 
+        />
+        <KpiCard 
+          title="Costos conductores" 
+          value={formatCompactCurrency(data?.totalDriverCost || 0)} 
+          icon={Users} 
+          color="text-amber-400" 
+          bg="bg-amber-500/20" 
+        />
+        <KpiCard 
           title="Pasajeros transportados" 
           value={(data?.totalPassengers || 0).toLocaleString()} 
           icon={Users} 
@@ -229,24 +338,65 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Unit Types Chart */}
-        <div className="bg-[#161920] p-6 rounded-2xl border border-[#222631] lg:col-span-2">
-          <h2 className="text-lg font-semibold text-white mb-6">KPI $/km según tipo de unidad</h2>
+        {/* Revenue vs Costs Chart */}
+        <div className="bg-[#161920] p-6 rounded-2xl border border-[#222631] lg:col-span-3">
+          <h2 className="text-lg font-semibold text-white mb-6">Ingresos vs Costos (Últimos 6 meses)</h2>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.unitMetrics} margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
+              <ComposedChart data={data.revenueVsCostData} margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#222631" />
-                <XAxis dataKey="unitType" stroke="#94a3b8" tick={{fill: '#94a3b8'}} />
-                <YAxis stroke="#94a3b8" tick={{fill: '#94a3b8'}} tickFormatter={(value) => `$${value}`} />
+                <XAxis dataKey="month" stroke="#94a3b8" tick={{fill: '#94a3b8'}} />
+                <YAxis stroke="#94a3b8" tick={{fill: '#94a3b8'}} tickFormatter={(value) => formatCompactCurrency(value)} />
                 <Tooltip 
                   contentStyle={{ backgroundColor: '#161920', borderColor: '#222631', color: '#fff' }}
                   itemStyle={{ color: '#fff' }}
-                  formatter={(value: any) => [formatCurrency(value) + '/km', 'Relación $/km']}
+                  formatter={(value: any) => [formatCurrency(value), '']}
                   cursor={{ fill: '#222631' }}
                 />
-                <Bar dataKey="avgPricePerKm" name="Relación $/km" fill="#10b981" radius={[4, 4, 0, 0]} barSize={48} />
-              </BarChart>
+                <Legend wrapperStyle={{ color: '#94a3b8' }} />
+                <Bar dataKey="revenue" name="Ingresos" fill="#10b981" radius={[4, 4, 0, 0]} barSize={40} />
+                <Line type="monotone" dataKey="costs" name="Costos" stroke="#ef4444" strokeWidth={3} dot={{ r: 4 }} />
+              </ComposedChart>
             </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Unit Types KPI Card */}
+        <div className="bg-[#161920] p-6 rounded-2xl border border-[#222631] lg:col-span-2 flex flex-col">
+          <div className="flex items-center gap-2 mb-6">
+            <TrendingUp className="w-5 h-5 text-orange-500" />
+            <h2 className="text-lg font-semibold text-white">KPI $/km por Unidad</h2>
+          </div>
+          
+          <div className="space-y-6 flex-1">
+            {data.unitMetrics.map((metric, index) => {
+              const maxAvgPricePerKm = Math.max(...data.unitMetrics.map(m => m.avgPricePerKm), 1);
+              const percentage = (metric.avgPricePerKm / maxAvgPricePerKm) * 100;
+              return (
+                <div key={index} className="flex flex-col gap-2">
+                  <div className="flex justify-between items-end">
+                    <span className="text-slate-200 font-medium">{metric.unitType}</span>
+                    <span className="text-sm text-slate-400">{metric.trips} {metric.trips === 1 ? 'viaje' : 'viajes'}</span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1 h-2.5 bg-[#222631] rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-orange-500 rounded-full" 
+                        style={{ width: `${percentage}%` }}
+                      />
+                    </div>
+                    <span className="text-orange-500 font-semibold whitespace-nowrap">
+                      {new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(metric.avgPricePerKm)}/km
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+            {data.unitMetrics.length === 0 && (
+              <div className="text-slate-400 text-center py-8">
+                No hay datos suficientes
+              </div>
+            )}
           </div>
         </div>
 

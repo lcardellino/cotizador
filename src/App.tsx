@@ -1,5 +1,5 @@
-import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Calculator, FileText, Users, Calendar, Bus, ChevronLeft, ChevronRight, Menu, Bell } from "lucide-react";
+import { BrowserRouter, Routes, Route, Link, useLocation, Navigate } from "react-router-dom";
+import { LayoutDashboard, Calculator, FileText, Users, Calendar, Bus, ChevronLeft, ChevronRight, Menu, Bell, LogOut } from "lucide-react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { useState, useEffect } from "react";
@@ -10,6 +10,7 @@ import Cotizaciones from "./pages/Cotizaciones";
 import Clientes from "./pages/Clientes";
 import Agenda from "./pages/Agenda";
 import Vehiculos from "./pages/Vehiculos";
+import Login from "./pages/Login";
 
 import type { ReactNode } from "react";
 
@@ -106,7 +107,7 @@ function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen }:
   );
 }
 
-function Layout({ children }: { children: ReactNode }) {
+function Layout({ children, onLogout }: { children: ReactNode, onLogout: () => void }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [showAlerts, setShowAlerts] = useState(false);
@@ -172,6 +173,13 @@ function Layout({ children }: { children: ReactNode }) {
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
               )}
             </button>
+            <button
+              onClick={onLogout}
+              className="p-2 text-slate-400 hover:text-red-400 hover:bg-[#222631] rounded-lg transition-colors"
+              title="Cerrar Sesión"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
 
             {showAlerts && (
               <div className="absolute top-full right-0 mt-2 w-80 bg-[#161920] border border-[#222631] rounded-xl shadow-xl z-50 overflow-hidden">
@@ -214,18 +222,45 @@ function Layout({ children }: { children: ReactNode }) {
 }
 
 export default function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return localStorage.getItem("isAuthenticated") === "true";
+  });
+
+  const handleLogin = () => {
+    setIsAuthenticated(true);
+    localStorage.setItem("isAuthenticated", "true");
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    localStorage.removeItem("isAuthenticated");
+  };
+
   return (
     <BrowserRouter>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/cotizador" element={<Cotizador />} />
-          <Route path="/cotizaciones" element={<Cotizaciones />} />
-          <Route path="/clientes" element={<Clientes />} />
-          <Route path="/agenda" element={<Agenda />} />
-          <Route path="/vehiculos" element={<Vehiculos />} />
-        </Routes>
-      </Layout>
+      <Routes>
+        <Route path="/login" element={
+          !isAuthenticated ? <Login onLogin={handleLogin} /> : <Navigate to="/" />
+        } />
+        
+        <Route path="/*" element={
+          isAuthenticated ? (
+            <Layout onLogout={handleLogout}>
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/cotizador" element={<Cotizador />} />
+                <Route path="/cotizaciones" element={<Cotizaciones />} />
+                <Route path="/clientes" element={<Clientes />} />
+                <Route path="/agenda" element={<Agenda />} />
+                <Route path="/vehiculos" element={<Vehiculos />} />
+                <Route path="*" element={<Navigate to="/" />} />
+              </Routes>
+            </Layout>
+          ) : (
+            <Navigate to="/login" />
+          )
+        } />
+      </Routes>
     </BrowserRouter>
   );
 }

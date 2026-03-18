@@ -42,6 +42,10 @@ export interface SavedBudget {
   descripcion?: string;
   subtotal?: number;
   ivaAmount?: number;
+  carCost?: number;
+  depreciationCost?: number;
+  totalDriverCost?: number;
+  dirtRoadCost?: number;
 
   // Full state fields for loading and modifying
   kmProductivos?: number;
