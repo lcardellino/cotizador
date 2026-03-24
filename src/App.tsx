@@ -112,38 +112,89 @@ function Layout({ children, onLogout }: { children: ReactNode, onLogout: () => v
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [showAlerts, setShowAlerts] = useState(false);
   const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
+  const [upcomingRTOs, setUpcomingRTOs] = useState<any[]>([]);
 
   const currentUser = localStorage.getItem("currentUser") || "lucas";
 
   useEffect(() => {
-    const savedBudgetsStr = localStorage.getItem(`savedBudgets_${currentUser}`);
-    if (savedBudgetsStr) {
-      try {
-        const parsed = JSON.parse(savedBudgetsStr);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        const threeDaysFromNow = new Date(today);
-        threeDaysFromNow.setDate(today.getDate() + 3);
+    const loadBudgets = () => {
+      const savedBudgetsStr = localStorage.getItem(`savedBudgets_${currentUser}`);
+      if (savedBudgetsStr) {
+        try {
+          const parsed = JSON.parse(savedBudgetsStr);
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          
+          const threeDaysFromNow = new Date(today);
+          threeDaysFromNow.setDate(today.getDate() + 3);
 
-        const upcoming = parsed.filter((b: any) => {
-          if (!b.date) return false;
-          // Assuming date is in YYYY-MM-DD format
-          const dateStringWithTime = b.date.includes('T') ? b.date : `${b.date}T00:00:00`;
-          const eventDate = new Date(dateStringWithTime);
-          return eventDate >= today && eventDate <= threeDaysFromNow && b.status === 'confirmado';
-        }).sort((a: any, b: any) => {
-          const dateA = new Date(a.date.includes('T') ? a.date : `${a.date}T00:00:00`).getTime();
-          const dateB = new Date(b.date.includes('T') ? b.date : `${b.date}T00:00:00`).getTime();
-          return dateA - dateB;
-        });
+          const upcoming = parsed.filter((b: any) => {
+            if (!b.date) return false;
+            // Assuming date is in YYYY-MM-DD format
+            const dateStringWithTime = b.date.includes('T') ? b.date : `${b.date}T00:00:00`;
+            const eventDate = new Date(dateStringWithTime);
+            return eventDate >= today && eventDate <= threeDaysFromNow && b.status === 'confirmado';
+          }).sort((a: any, b: any) => {
+            const dateA = new Date(a.date.includes('T') ? a.date : `${a.date}T00:00:00`).getTime();
+            const dateB = new Date(b.date.includes('T') ? b.date : `${b.date}T00:00:00`).getTime();
+            return dateA - dateB;
+          });
 
-        setUpcomingEvents(upcoming);
-      } catch (e) {
-        console.error("Error parsing saved budgets for alerts", e);
+          setUpcomingEvents(upcoming);
+        } catch (e) {
+          console.error("Error parsing saved budgets for alerts", e);
+        }
       }
-    }
-  }, []);
+    };
+
+    const loadVehicles = () => {
+      const savedVehiclesStr = localStorage.getItem("vehicles_v2");
+      if (savedVehiclesStr) {
+        try {
+          const vehicles = JSON.parse(savedVehiclesStr);
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          
+          const tenDaysFromNow = new Date(today);
+          tenDaysFromNow.setDate(today.getDate() + 10);
+
+          const rtos: any[] = [];
+
+          vehicles.forEach((v: any) => {
+            if (v.rtoNacional) {
+              const rtoNacDate = new Date(`${v.rtoNacional}T00:00:00`);
+              if (rtoNacDate >= today && rtoNacDate <= tenDaysFromNow) {
+                rtos.push({ id: `${v.id}-nac`, plate: v.plate, type: 'Nacional', date: v.rtoNacional });
+              } else if (rtoNacDate < today) {
+                rtos.push({ id: `${v.id}-nac`, plate: v.plate, type: 'Nacional', date: v.rtoNacional, expired: true });
+              }
+            }
+            if (v.rtoProvincial) {
+              const rtoProvDate = new Date(`${v.rtoProvincial}T00:00:00`);
+              if (rtoProvDate >= today && rtoProvDate <= tenDaysFromNow) {
+                rtos.push({ id: `${v.id}-prov`, plate: v.plate, type: 'Provincial', date: v.rtoProvincial });
+              } else if (rtoProvDate < today) {
+                rtos.push({ id: `${v.id}-prov`, plate: v.plate, type: 'Provincial', date: v.rtoProvincial, expired: true });
+              }
+            }
+          });
+
+          rtos.sort((a, b) => new Date(`${a.date}T00:00:00`).getTime() - new Date(`${b.date}T00:00:00`).getTime());
+          setUpcomingRTOs(rtos);
+        } catch (e) {
+          console.error("Error parsing vehicles for alerts", e);
+        }
+      }
+    };
+
+    loadBudgets();
+    loadVehicles();
+
+    window.addEventListener("vehiclesUpdated", loadVehicles);
+    return () => {
+      window.removeEventListener("vehiclesUpdated", loadVehicles);
+    };
+  }, [currentUser]);
 
   return (
     <div className="flex h-screen bg-[#0f1117] overflow-hidden font-sans">
@@ -171,7 +222,7 @@ function Layout({ children, onLogout }: { children: ReactNode, onLogout: () => v
               onClick={() => setShowAlerts(!showAlerts)}
             >
               <Bell className="w-5 h-5" />
-              {upcomingEvents.length > 0 && (
+              {(upcomingEvents.length > 0 || upcomingRTOs.length > 0) && (
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
               )}
             </button>
@@ -188,7 +239,7 @@ function Layout({ children, onLogout }: { children: ReactNode, onLogout: () => v
                 <div className="p-3 border-b border-[#222631] bg-[#1a1d24]">
                   <h3 className="text-sm font-semibold text-white">Próximos Eventos (3 días)</h3>
                 </div>
-                <div className="max-h-96 overflow-y-auto p-2 space-y-2">
+                <div className="max-h-60 overflow-y-auto p-2 space-y-2">
                   {upcomingEvents.length > 0 ? (
                     upcomingEvents.map(event => (
                       <div key={event.id} className="p-3 rounded-lg bg-[#0f1117] border border-[#222631]">
@@ -208,6 +259,29 @@ function Layout({ children, onLogout }: { children: ReactNode, onLogout: () => v
                   ) : (
                     <div className="p-4 text-center text-sm text-slate-500">
                       No hay eventos confirmados para los próximos 3 días.
+                    </div>
+                  )}
+                </div>
+                
+                <div className="p-3 border-y border-[#222631] bg-[#1a1d24]">
+                  <h3 className="text-sm font-semibold text-white">Vencimientos RTO (10 días)</h3>
+                </div>
+                <div className="max-h-60 overflow-y-auto p-2 space-y-2">
+                  {upcomingRTOs.length > 0 ? (
+                    upcomingRTOs.map(rto => (
+                      <div key={rto.id} className={`p-3 rounded-lg bg-[#0f1117] border ${rto.expired ? 'border-red-500/50' : 'border-amber-500/50'}`}>
+                        <div className="flex justify-between items-start mb-1">
+                          <span className="text-sm font-medium text-white">Patente: {rto.plate}</span>
+                          <span className={`text-xs ${rto.expired ? 'text-red-400 font-bold' : 'text-amber-400'}`}>{rto.date}</span>
+                        </div>
+                        <div className="text-xs text-slate-400">
+                          RTO {rto.type} {rto.expired ? 'Vencida' : 'por vencer'}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-4 text-center text-sm text-slate-500">
+                      No hay vencimientos RTO próximos.
                     </div>
                   )}
                 </div>

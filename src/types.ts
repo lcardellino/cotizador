@@ -6,13 +6,13 @@ export type VehicleStatus = 'activo' | 'mantenimiento' | 'inactivo';
 export interface Vehicle {
   id: string;
   plate: string;
+  internalNumber: string;
   unitType: string; // '19', '24', '44', '46', '60'
   brand: string;
   model: string;
-  year: number;
   status: VehicleStatus;
-  mileage: number;
-  lastMaintenance?: string;
+  rtoNacional?: string;
+  rtoProvincial?: string;
 }
 
 export interface SavedBudget {

@@ -1,5 +1,6 @@
 import React, { forwardRef } from 'react';
 import { format } from 'date-fns';
+import { MapPin, Calendar, Clock, ArrowRight } from 'lucide-react';
 
 type PdfExportTemplateProps = {
   correlativeNumber: string;
@@ -42,13 +43,12 @@ const PdfExportTemplate = forwardRef<HTMLDivElement, PdfExportTemplateProps>((pr
     finalTotal
   } = props;
 
-  const formatCurrencyNumber = (val: number) => {
-    return new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
-  };
-
-  const formatCurrency = (val: number) => {
-    return '$' + formatCurrencyNumber(val);
-  };
+  const formatCurrency = (val: number) =>
+    new Intl.NumberFormat("es-AR", {
+      style: "currency",
+      currency: "ARS",
+      minimumFractionDigits: 2,
+    }).format(val);
 
   const formatDate = (dateString: string) => {
     if (!dateString) return '';
@@ -57,223 +57,262 @@ const PdfExportTemplate = forwardRef<HTMLDivElement, PdfExportTemplateProps>((pr
         const [year, month, day] = dateString.split('-');
         return `${parseInt(day)}/${parseInt(month)}/${year}`;
       }
-      return format(new Date(dateString), 'd/M/yyyy');
+      return format(new Date(dateString), 'dd/MM/yyyy');
     } catch (e) {
       return dateString;
     }
   };
 
-  const formatTime = (timeString: string) => {
-    if (!timeString) return '';
-    return timeString;
-  };
-
-  const today = format(new Date(), 'd/M/yyyy');
+  const today = format(new Date(), 'dd/MM/yyyy');
 
   return (
-    <div className="pdf-export-template" style={{ position: 'absolute', top: '-10000px', left: '-10000px', width: '794px', minHeight: '1123px', backgroundColor: '#ffffff', boxSizing: 'border-box' }}>
+    <div className="pdf-export-template" style={{ position: 'absolute', top: '-10000px', left: '-10000px', width: '794px', height: '1120px', overflow: 'hidden', backgroundColor: '#ffffff', boxSizing: 'border-box' }}>
       <div 
         ref={ref}
-        className="bg-[#ffffff] font-sans"
+        className="font-sans"
         style={{ 
           width: '794px',
-          minHeight: '1123px',
+          height: '1120px',
+          overflow: 'hidden',
           padding: '40px 60px',
           margin: '0 auto',
           backgroundColor: '#ffffff',
-          boxSizing: 'border-box',
-          color: '#4b5563'
+          color: '#0f172a',
+          boxSizing: 'border-box'
         }}
       >
         {/* Header */}
-        <div className="flex justify-between items-center mb-2">
-          <div>
-            <h1 className="text-4xl font-bold italic text-[#6b7280] tracking-tight mb-1">PRESUPUESTO</h1>
-            <div className="text-3xl font-bold text-[#15803d] mb-6">N° {correlativeNumber}</div>
-            
-            <div className="text-sm font-bold text-[#374151] uppercase mb-1">CLIENTE:</div>
-            <div className="text-lg text-[#374151]">{cliente || '-'}</div>
-          </div>
-          <div className="text-right flex flex-col items-end justify-center">
-            <img src="/logo.png" alt="Grupo Fono Bus" className="h-16 object-contain mb-1" />
-            <div className="text-[10px] font-bold text-[#374151] mb-2">EMPRENDIMIENTOS SRL.</div>
-            <div className="text-xs text-[#6b7280] space-y-1">
-              <div>Dirección: Sierras Grandes 21 - B° Yapeyú - Córdoba.</div>
-              <div>Correo: viajesespeciales@grupofonobus.com.ar</div>
-              <div>Telefono: 351-6617222</div>
-            </div>
-          </div>
-        </div>
-        
-        <div className="border-b-2 border-[#15803d] mb-6"></div>
-
-        {/* Contact Info */}
-        <div className="grid grid-cols-2 gap-4 mb-6 text-xs text-[#374151]">
-          <div className="flex items-center gap-2">
-            <span className="font-bold uppercase w-24">CONTACTO:</span>
-            <span>{contacto || '-'}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="font-bold uppercase w-24">FECHA:</span>
-            <span>{today}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="font-bold uppercase w-24">TELEFONO:</span>
-            <span>{telefono || '-'}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="font-bold uppercase w-24">EMAIL:</span>
-            <span>{mail || '-'}</span>
-          </div>
-        </div>
-
-        {/* Condiciones del Viaje */}
-        <div className="bg-[#c1e1c5] px-2 py-1 mb-4">
-          <h3 className="text-xs font-bold text-[#374151] uppercase">CONDICIONES DEL VIAJE</h3>
-        </div>
-
-        <div className="grid grid-cols-2 gap-x-12 gap-y-2 mb-8 text-xs">
-          <div className="flex items-center">
-            <div className="bg-[#c1e1c5] px-2 py-1 font-bold text-[#374151] w-32 border border-[#c1e1c5]">FECHA SALIDA:</div>
-            <div className="px-2 py-1 border border-[#d1d5db] flex-1 text-center bg-white">{formatDate(fechaSalida) || '-'}</div>
-          </div>
-          <div className="flex items-center">
-            <div className="bg-[#c1e1c5] px-2 py-1 font-bold text-[#374151] w-32 border border-[#c1e1c5]">HORA SALIDA:</div>
-            <div className="px-2 py-1 border border-[#d1d5db] flex-1 text-center bg-white">{formatTime(horaSalida) || '-'}</div>
-          </div>
-          <div className="flex items-center">
-            <div className="bg-[#c1e1c5] px-2 py-1 font-bold text-[#374151] w-32 border border-[#c1e1c5]">FECHA REGRESO:</div>
-            <div className="px-2 py-1 border border-[#d1d5db] flex-1 text-center bg-white">{formatDate(fechaRegreso) || '-'}</div>
-          </div>
-          <div className="flex items-center">
-            <div className="bg-[#c1e1c5] px-2 py-1 font-bold text-[#374151] w-32 border border-[#c1e1c5]">HORA REGRESO:</div>
-            <div className="px-2 py-1 border border-[#d1d5db] flex-1 text-center bg-white">{formatTime(horaRegreso) || '-'}</div>
-          </div>
-        </div>
-
-        {/* Locations */}
-        <div className="flex items-center justify-between mb-8 px-4">
-          <div className="flex flex-col gap-6 w-5/12">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-[#dcfce7] flex items-center justify-center text-[#16a34a] shrink-0">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+        <div className="flex justify-between items-start mb-8 pb-6 border-b-2 border-[#059669]">
+          {/* Left side - Info */}
+          <div className="flex-1">
+            <h1 className="text-4xl font-bold text-[#0f172a] mb-2">PRESUPUESTO</h1>
+            {correlativeNumber && (
+              <p className="text-xl text-[#047857] font-bold mb-2">N° {correlativeNumber}</p>
+            )}
+            <h2 className="text-lg text-[#475569] font-semibold mb-3">Viaje Especial</h2>
+            {cliente && cliente !== "Sin Cliente" && (
+              <div className="mt-4">
+                <p className="text-xs text-[#64748b] uppercase font-semibold">CLIENTE:</p>
+                <p className="text-lg text-[#1e293b] font-semibold">{cliente}</p>
               </div>
-              <div className="flex flex-col justify-center">
-                <div className="text-[10px] font-bold text-[#6b7280] uppercase">ORIGEN</div>
-                <div className="text-base font-semibold text-[#374151]">{origen || '-'}</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-[#fef3c7] flex items-center justify-center text-[#d97706] shrink-0">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-              </div>
-              <div className="flex flex-col justify-center">
-                <div className="text-[10px] font-bold text-[#6b7280] uppercase">REGRESO A</div>
-                <div className="text-base font-semibold text-[#374151]">{regresoA || '-'}</div>
-              </div>
-            </div>
+            )}
           </div>
           
-          <div className="text-[#cbd5e1] w-2/12 flex justify-center items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-          </div>
-
-          <div className="flex items-center gap-3 w-5/12">
-            <div className="w-8 h-8 rounded-full bg-[#dbeafe] flex items-center justify-center text-[#2563eb] shrink-0">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-            </div>
-            <div className="flex flex-col justify-center">
-              <div className="text-[10px] font-bold text-[#6b7280] uppercase">DESTINO</div>
-              <div className="text-base font-semibold text-[#374151]">{destino || '-'}</div>
+          {/* Right side - Logo and company data */}
+          <div className="w-1/3 text-right">
+            <img
+              src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/698676368b524ebad3f64115/e9455546d_Logo-Fono-Bus-2222para-usarcopiacopia.png"
+              alt="FonoBus"
+              className="w-full h-auto mb-4 ml-auto"
+            />
+            <div className="space-y-1">
+              <p className="text-xs text-[#475569] font-medium"><span className="text-[#64748b]">Dirección:</span> Sierras Grandes 21</p>
+              <p className="text-xs text-[#475569] font-medium">B° Yapeyú - Córdoba.</p>
+              <p className="text-xs text-[#047857] font-semibold mt-2">viajesespeciales@grupofonobus.com.ar</p>
+              <p className="text-xs text-[#334155] font-bold"><span className="text-[#64748b] font-medium">Teléfono:</span> 351-6617222</p>
             </div>
           </div>
         </div>
 
-        {/* Table */}
-        <div className="border-t-2 border-b-2 border-[#15803d] mb-4">
-          <table className="w-full text-sm" style={{ tableLayout: 'fixed' }}>
+        {/* Contact and Date */}
+        <div className="grid grid-cols-2 gap-8 mb-6">
+          <div className="space-y-4">
+            {contacto && (
+              <div className="flex items-center">
+                <span className="text-xs text-[#64748b] uppercase font-semibold w-24">CONTACTO:</span>
+                <span className="text-sm text-[#1e293b]">
+                  {contacto}
+                </span>
+              </div>
+            )}
+            {telefono && (
+              <div className="flex items-center">
+                <span className="text-xs text-[#64748b] uppercase font-semibold w-24">TELÉFONO:</span>
+                <span className="text-sm text-[#1e293b]">
+                  {telefono}
+                </span>
+              </div>
+            )}
+          </div>
+          <div className="space-y-4">
+            <div className="flex items-center">
+              <span className="text-xs text-[#64748b] uppercase font-semibold w-24">FECHA:</span>
+              <span className="text-sm text-[#1e293b]">
+                {today}
+              </span>
+            </div>
+            {mail && (
+              <div className="flex items-center">
+                <span className="text-xs text-[#64748b] uppercase font-semibold w-24">EMAIL:</span>
+                <span className="text-sm text-[#1e293b]">
+                  {mail}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Trip Details */}
+        <div className="bg-[#f8fafc] rounded-lg p-4 mb-6">
+          <h3 className="text-sm font-bold text-[#334155] uppercase mb-3 border-b border-[#e2e8f0] pb-2">
+            Condiciones del Viaje
+          </h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              {fechaSalida && (
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-[#059669]" />
+                  <span className="text-xs text-[#64748b] uppercase font-semibold">Fecha Salida:</span>
+                  <span className="text-sm text-[#1e293b] font-medium">
+                    {formatDate(fechaSalida)}
+                  </span>
+                </div>
+              )}
+              {fechaRegreso && (
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-[#059669]" />
+                  <span className="text-xs text-[#64748b] uppercase font-semibold">Fecha Regreso:</span>
+                  <span className="text-sm text-[#1e293b] font-medium">
+                    {formatDate(fechaRegreso)}
+                  </span>
+                </div>
+              )}
+            </div>
+            <div className="space-y-2">
+              {horaSalida && (
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-[#059669]" />
+                  <span className="text-xs text-[#64748b] uppercase font-semibold">Hora Salida:</span>
+                  <span className="text-sm text-[#1e293b] font-medium">{horaSalida}</span>
+                </div>
+              )}
+              {horaRegreso && (
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-[#059669]" />
+                  <span className="text-xs text-[#64748b] uppercase font-semibold">Hora Regreso:</span>
+                  <span className="text-sm text-[#1e293b] font-medium">{horaRegreso}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Route visualization */}
+          {(origen || destino || regresoA) && (
+            <div className="mt-4 pt-4 border-t border-[#e2e8f0]">
+              <div className="flex items-center justify-between gap-2">
+                {origen && (
+                  <div className="flex items-center gap-2 flex-1">
+                    <div className="h-10 w-10 rounded-full bg-[#d1fae5] flex items-center justify-center">
+                      <MapPin className="h-5 w-5 text-[#059669]" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-[#64748b] uppercase font-semibold">Origen</p>
+                      <p className="text-sm font-semibold text-[#1e293b]">{origen}</p>
+                    </div>
+                  </div>
+                )}
+                <ArrowRight className="h-5 w-5 text-[#cbd5e1] flex-shrink-0" />
+                {destino && (
+                  <div className="flex items-center gap-2 flex-1">
+                    <div className="h-10 w-10 rounded-full bg-[#dbeafe] flex items-center justify-center">
+                      <MapPin className="h-5 w-5 text-[#2563eb]" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-[#64748b] uppercase font-semibold">Destino</p>
+                      <p className="text-sm font-semibold text-[#1e293b]">{destino}</p>
+                    </div>
+                  </div>
+                )}
+                {regresoA && (
+                  <>
+                    <ArrowRight className="h-5 w-5 text-[#cbd5e1] flex-shrink-0" />
+                    <div className="flex items-center gap-2 flex-1">
+                      <div className="h-10 w-10 rounded-full bg-[#fef3c7] flex items-center justify-center">
+                        <MapPin className="h-5 w-5 text-[#d97706]" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-[#64748b] uppercase font-semibold">Regreso a</p>
+                        <p className="text-sm font-semibold text-[#1e293b]">{regresoA}</p>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Service Description Table */}
+        <div className="mb-6">
+          <table className="w-full border-collapse border border-[#cbd5e1]">
             <thead>
-              <tr>
-                <th className="text-left py-2 px-2 font-bold text-[#374151] uppercase w-1/2 align-middle">DESCRIPCION DEL SERVICIO</th>
-                <th className="text-center py-2 px-2 font-bold text-[#374151] uppercase w-1/6 align-middle">PRECIO</th>
-                <th className="text-center py-2 px-2 font-bold text-[#374151] uppercase w-1/6 align-middle">CANT.</th>
-                <th className="text-right py-2 px-2 font-bold text-[#374151] uppercase w-1/6 align-middle">TOTAL</th>
+              <tr className="bg-[#e2e8f0]">
+                <th className="border border-[#cbd5e1] px-3 py-2 text-left text-xs font-bold uppercase">
+                  Descripción del Servicio
+                </th>
+                <th className="border border-[#cbd5e1] px-3 py-2 text-center text-xs font-bold uppercase w-24">
+                  Cantidad
+                </th>
+                <th className="border border-[#cbd5e1] px-3 py-2 text-right text-xs font-bold uppercase w-32">
+                  Total
+                </th>
               </tr>
             </thead>
+            <tbody>
+              <tr>
+                <td className="border border-[#cbd5e1] px-3 py-2 text-sm">
+                  {descripcion || "Servicio de transporte"}
+                </td>
+                <td className="border border-[#cbd5e1] px-3 py-2 text-center text-sm">1</td>
+                <td className="border border-[#cbd5e1] px-3 py-2 text-right text-sm font-semibold">
+                  {formatCurrency(finalTotal)}
+                </td>
+              </tr>
+            </tbody>
           </table>
         </div>
-        
-        <table className="w-full text-sm mb-12" style={{ tableLayout: 'fixed' }}>
-          <tbody>
-            <tr>
-              <td className="py-2 px-2 text-[#6b7280] w-1/2 align-middle">{descripcion || 'Traslado privado'}</td>
-              <td className="py-2 px-2 text-center text-[#6b7280] w-1/6 align-middle">
-                <div className="flex justify-between"><span>$</span><span>{formatCurrencyNumber(finalTotal)}</span></div>
-              </td>
-              <td className="py-2 px-2 text-center text-[#6b7280] w-1/6 align-middle">1</td>
-              <td className="py-2 px-2 text-right text-[#6b7280] w-1/6 align-middle">
-                <div className="flex justify-between"><span>$</span><span>{formatCurrencyNumber(finalTotal)}</span></div>
-              </td>
-            </tr>
-            <tr>
-              <td className="py-2 px-2 text-[#6b7280] w-1/2 align-middle"></td>
-              <td className="py-2 px-2 text-center text-[#6b7280] w-1/6 align-middle">
-                <div className="flex justify-between"><span>$</span><span>-</span></div>
-              </td>
-              <td className="py-2 px-2 text-center text-[#6b7280] w-1/6 align-middle">0</td>
-              <td className="py-2 px-2 text-right text-[#6b7280] w-1/6 align-middle">
-                <div className="flex justify-between"><span>$</span><span>-</span></div>
-              </td>
-            </tr>
-            <tr>
-              <td className="py-2 px-2 text-[#6b7280] w-1/2 align-middle"></td>
-              <td className="py-2 px-2 text-center text-[#6b7280] w-1/6 align-middle">
-                <div className="flex justify-between"><span>$</span><span>-</span></div>
-              </td>
-              <td className="py-2 px-2 text-center text-[#6b7280] w-1/6 align-middle">0</td>
-              <td className="py-2 px-2 text-right text-[#6b7280] w-1/6 align-middle">
-                <div className="flex justify-between"><span>$</span><span>-</span></div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
 
-        {/* Totals */}
-        <div className="flex justify-between items-center mb-12">
-          <div className="flex items-center gap-4 text-sm">
-            <span className="text-[#6b7280]">Cantidad de pasajeros</span>
-            <span className="text-[#dc2626] font-medium">{passengers}</span>
-          </div>
-          
-          <div className="w-64 space-y-2 text-sm">
-            <div className="flex justify-between items-center font-bold text-[#374151] px-2">
-              <span>SUB.TOTAL:</span>
-              <span>{formatCurrency(subtotal)}</span>
-            </div>
-            <div className="flex justify-between items-center font-bold text-[#374151] px-2">
-              <span>DESC.: (%)</span>
-              <span>0,0%</span>
-            </div>
-            <div className="flex justify-between items-center font-bold text-[#374151] bg-[#c1e1c5] px-2 py-1 -mx-2">
-              <span>TOTAL (iva incl):</span>
-              <span>{formatCurrency(finalTotal)}</span>
+        {/* Summary */}
+        <div className="flex justify-end mb-6">
+          <div className="w-80">
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between py-1">
+                <span className="text-[#475569]">Cantidad de pasajeros:</span>
+                <span className="font-semibold">{passengers || 0}</span>
+              </div>
+              <div className="flex justify-between py-1 border-t border-[#e2e8f0]">
+                <span className="text-[#475569]">SUB.TOTAL:</span>
+                <span className="font-semibold">{formatCurrency(subtotal)}</span>
+              </div>
+              <div className="flex justify-between py-1">
+                <span className="text-[#475569]">IVA (10.5%):</span>
+                <span className="font-semibold">{formatCurrency(ivaAmount)}</span>
+              </div>
+              <div className="flex justify-between py-3 bg-[#d1fae5] px-3 rounded-md border-2 border-[#059669]">
+                <span className="font-bold text-[#1e293b]">TOTAL (Iva incl):</span>
+                <span className="font-bold text-[#065f46] text-lg">{formatCurrency(finalTotal)}</span>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Footer Notes */}
-        <div className="space-y-1 mb-8">
-          <div className="bg-[#c1e1c5] border border-[#15803d] py-1 flex justify-center items-center">
-            <span className="font-bold italic text-[#374151]">La cotización tiene una validez de 15 días.</span>
-          </div>
-          <div className="bg-[#c1e1c5] border border-[#15803d] py-1 flex justify-center items-center">
-            <span className="font-bold italic text-[#374151]">Tarifas y disponibilidad sujetas a confirmación</span>
-          </div>
+        {/* Footer */}
+        <div className="space-y-2 bg-[#ecfdf5] p-4 rounded-lg mb-3">
+          <p className="text-center text-sm font-semibold text-[#065f46]">
+            La cotización tiene una validez de 15 días.
+          </p>
+          <p className="text-center text-sm font-semibold text-[#065f46]">
+            Tarifas y disponibilidad sujetas a confirmación
+          </p>
         </div>
 
-        <div className="text-[10px] text-[#6b7280] italic space-y-1">
-          <p>IMPORTANTE: LOS VIAJES DEBERAN SER ABONADOS CON UN MINIMO DE 72 hs ANTES DE LA FECHA PACTADA.</p>
-          <p>LA FORMA DE PAGO ES MEDIANTE DEPOSITO BANCARIO, EL CUAL SE DEBERA ENVIAR COMPROBANTE DE PAGO POR CORREO ELECTRONICO Y/O WHATSAPP AL NUMERO 351-6617222</p>
+        <div className="border-t-2 border-[#e2e8f0] pt-3 space-y-2 text-xs text-[#475569] italic uppercase">
+          <p>
+            <strong>IMPORTANTE:</strong> LOS VIAJES DEBERÁN SER ABONADOS CON UN MÍNIMO DE 72 hs ANTES DE LA FECHA DE LOS MISMOS.
+          </p>
+          <p>
+            LA FORMA DE PAGO ES MEDIANTE DEPÓSITO BANCARIO, EL CUAL SE DEBERÁ ENVIAR COMPROBANTE DE PAGO POR CORREO ELECTRÓNICO Y/O WHATSAPP AL NÚMERO 351-6617222
+          </p>
         </div>
       </div>
     </div>

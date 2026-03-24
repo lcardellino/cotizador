@@ -16,14 +16,17 @@ import {
   startOfDay
 } from "date-fns";
 import { es } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, AlertTriangle, CheckCircle, Clock, Calendar as CalendarIcon, MapPin, Users, Bus, DollarSign, X, FileText } from "lucide-react";
-import { SavedBudget } from "../types";
+import { ChevronLeft, ChevronRight, AlertTriangle, CheckCircle, Clock, Calendar as CalendarIcon, MapPin, Users, Bus, DollarSign, X, FileText, Edit2, Save } from "lucide-react";
+import { SavedBudget, BudgetStatus, PaymentStatus } from "../types";
 
 export default function Agenda() {
   const currentUser = localStorage.getItem("currentUser") || "lucas";
   const [currentDate, setCurrentDate] = useState(new Date());
   const [budgets, setBudgets] = useState<SavedBudget[]>([]);
   const [selectedBudget, setSelectedBudget] = useState<SavedBudget | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editStatus, setEditStatus] = useState<BudgetStatus>('pendiente');
+  const [editPaymentStatus, setEditPaymentStatus] = useState<PaymentStatus>('falta_pagar');
 
   useEffect(() => {
     const loadBudgets = () => {
@@ -41,6 +44,46 @@ export default function Agenda() {
     };
     loadBudgets();
   }, []);
+
+  const handleOpenBudget = (budget: SavedBudget) => {
+    setSelectedBudget(budget);
+    setIsEditing(false);
+    setEditStatus(budget.status);
+    setEditPaymentStatus(budget.paymentStatus || 'falta_pagar');
+  };
+
+  const handleCloseBudget = () => {
+    setSelectedBudget(null);
+    setIsEditing(false);
+  };
+
+  const handleSaveBudgetStatus = () => {
+    if (!selectedBudget) return;
+    
+    const savedBudgetsStr = localStorage.getItem(`savedBudgets_${currentUser}`);
+    if (savedBudgetsStr) {
+      try {
+        const parsed = JSON.parse(savedBudgetsStr);
+        const updatedBudgets = parsed.map((b: SavedBudget) => 
+          b.id === selectedBudget.id ? { ...b, status: editStatus, paymentStatus: editPaymentStatus } : b
+        );
+        localStorage.setItem(`savedBudgets_${currentUser}`, JSON.stringify(updatedBudgets));
+        
+        // Update local state
+        const activeBudgets = updatedBudgets.filter((b: SavedBudget) => b.status !== 'cancelado');
+        setBudgets(activeBudgets);
+        
+        // Update selected budget
+        setSelectedBudget({ ...selectedBudget, status: editStatus, paymentStatus: editPaymentStatus });
+        setIsEditing(false);
+        
+        // Dispatch event so other components update if needed
+        window.dispatchEvent(new Event("budgetsUpdated"));
+      } catch (e) {
+        console.error("Error updating budget", e);
+      }
+    }
+  };
 
   const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
   const prevMonth = () => setCurrentDate(subMonths(currentDate, 1));
@@ -192,7 +235,7 @@ export default function Agenda() {
               {dayBudgets.map(budget => (
                 <div 
                   key={budget.id}
-                  onClick={() => setSelectedBudget(budget)}
+                  onClick={() => handleOpenBudget(budget)}
                   className={`text-xs p-1.5 rounded border cursor-pointer truncate transition-all hover:opacity-80 flex flex-col gap-0.5 ${getEventColor(budget)}`}
                   title={`${budget.client} - ${budget.destination}`}
                 >
@@ -237,7 +280,7 @@ export default function Agenda() {
             {upcomingAlerts.map(alert => (
               <div 
                 key={alert.id} 
-                onClick={() => setSelectedBudget(alert)}
+                onClick={() => handleOpenBudget(alert)}
                 className="bg-[#161920] border border-[#222631] p-4 rounded-xl cursor-pointer hover:border-blue-500/50 transition-colors"
               >
                 <div className="flex justify-between items-start mb-2">
@@ -312,7 +355,7 @@ export default function Agenda() {
                 upcomingList.map((budget) => (
                   <tr 
                     key={budget.id} 
-                    onClick={() => setSelectedBudget(budget)}
+                    onClick={() => handleOpenBudget(budget)}
                     className="hover:bg-[#1a1d24] transition-colors cursor-pointer"
                   >
                     <td className="px-6 py-4 font-medium text-white whitespace-nowrap">
@@ -372,7 +415,7 @@ export default function Agenda() {
                 Detalle del Viaje
               </h3>
               <button 
-                onClick={() => setSelectedBudget(null)}
+                onClick={handleCloseBudget}
                 className="text-slate-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-[#222631]"
               >
                 <X className="w-6 h-6" />
@@ -388,20 +431,45 @@ export default function Agenda() {
                   <div className="text-sm text-slate-400 mt-1">Cotización N° {selectedBudget.budgetNumber}</div>
                 </div>
                 <div className="flex flex-col gap-2 items-end">
-                  <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold ${
-                    selectedBudget.paymentStatus === 'pago' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
-                  }`}>
-                    {selectedBudget.paymentStatus === 'pago' ? '💰 PAGADO' : '⚠ NO PAGADO'}
-                  </span>
-                  <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold ${
-                    selectedBudget.status === 'realizado' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 
-                    selectedBudget.status === 'confirmado' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 
-                    'bg-slate-500/10 text-slate-400 border border-slate-500/20'
-                  }`}>
-                    {selectedBudget.status === 'realizado' ? 'Realizado' : 
-                     selectedBudget.status === 'confirmado' ? '🚌 Confirmado' : 
-                     'Cotización'}
-                  </span>
+                  {isEditing ? (
+                    <>
+                      <select
+                        value={editPaymentStatus}
+                        onChange={(e) => setEditPaymentStatus(e.target.value as PaymentStatus)}
+                        className="px-3 py-1.5 bg-[#0f1117] border border-[#222631] rounded-lg text-sm font-bold text-white focus:outline-none focus:border-blue-500"
+                      >
+                        <option value="pago">💰 PAGADO</option>
+                        <option value="falta_pagar">⚠ NO PAGADO</option>
+                      </select>
+                      <select
+                        value={editStatus}
+                        onChange={(e) => setEditStatus(e.target.value as BudgetStatus)}
+                        className="px-3 py-1.5 bg-[#0f1117] border border-[#222631] rounded-lg text-sm font-bold text-white focus:outline-none focus:border-blue-500"
+                      >
+                        <option value="pendiente">Cotización</option>
+                        <option value="confirmado">🚌 Confirmado</option>
+                        <option value="realizado">Realizado</option>
+                        <option value="cancelado">Cancelado</option>
+                      </select>
+                    </>
+                  ) : (
+                    <>
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold ${
+                        selectedBudget.paymentStatus === 'pago' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                      }`}>
+                        {selectedBudget.paymentStatus === 'pago' ? '💰 PAGADO' : '⚠ NO PAGADO'}
+                      </span>
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold ${
+                        selectedBudget.status === 'realizado' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 
+                        selectedBudget.status === 'confirmado' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 
+                        'bg-slate-500/10 text-slate-400 border border-slate-500/20'
+                      }`}>
+                        {selectedBudget.status === 'realizado' ? 'Realizado' : 
+                         selectedBudget.status === 'confirmado' ? '🚌 Confirmado' : 
+                         'Cotización'}
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -469,9 +537,39 @@ export default function Agenda() {
               )}
             </div>
             
-            <div className="p-6 border-t border-[#222631] bg-[#1a1d24] flex justify-end">
+            <div className="p-6 border-t border-[#222631] bg-[#1a1d24] flex justify-between items-center">
+              {!isEditing ? (
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="px-4 py-2 bg-[#222631] hover:bg-slate-700 text-white font-medium rounded-xl transition-colors flex items-center gap-2"
+                >
+                  <Edit2 className="w-4 h-4" />
+                  Editar Estado
+                </button>
+              ) : (
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSaveBudgetStatus}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors flex items-center gap-2"
+                  >
+                    <Save className="w-4 h-4" />
+                    Guardar
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsEditing(false);
+                      setEditStatus(selectedBudget.status);
+                      setEditPaymentStatus(selectedBudget.paymentStatus || 'falta_pagar');
+                    }}
+                    className="px-4 py-2 bg-[#222631] hover:bg-slate-700 text-white font-medium rounded-xl transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              )}
+              
               <button 
-                onClick={() => setSelectedBudget(null)}
+                onClick={handleCloseBudget}
                 className="px-6 py-2 bg-[#222631] hover:bg-slate-700 text-white font-medium rounded-xl transition-colors"
               >
                 Cerrar

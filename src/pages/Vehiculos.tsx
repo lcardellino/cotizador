@@ -3,10 +3,10 @@ import { Bus, Plus, Search, Edit2, Trash2, X, CheckCircle, AlertTriangle, XCircl
 import { Vehicle, VehicleStatus } from "../types";
 
 const INITIAL_VEHICLES: Vehicle[] = [
-  { id: '1', plate: 'AF 123 CD', unitType: '19', brand: 'Mercedes-Benz', model: 'Sprinter', year: 2023, status: 'activo', mileage: 45000, lastMaintenance: '2023-10-15' },
-  { id: '2', plate: 'AE 456 FG', unitType: '60', brand: 'Volvo', model: 'Marcopolo Paradiso', year: 2022, status: 'mantenimiento', mileage: 120000, lastMaintenance: '2023-11-01' },
-  { id: '3', plate: 'AD 789 HI', unitType: '46', brand: 'Scania', model: 'K310', year: 2021, status: 'activo', mileage: 210000, lastMaintenance: '2023-09-20' },
-  { id: '4', plate: 'AC 012 JK', unitType: '24', brand: 'Iveco', model: 'Daily', year: 2020, status: 'inactivo', mileage: 350000, lastMaintenance: '2023-05-10' },
+  { id: '1', plate: 'AF 123 CD', internalNumber: '101', unitType: '19', brand: 'Mercedes-Benz', model: 'Sprinter', status: 'activo' },
+  { id: '2', plate: 'AE 456 FG', internalNumber: '102', unitType: '60', brand: 'Volvo', model: 'Marcopolo Paradiso', status: 'mantenimiento' },
+  { id: '3', plate: 'AD 789 HI', internalNumber: '103', unitType: '46', brand: 'Scania', model: 'K310', status: 'activo' },
+  { id: '4', plate: 'AC 012 JK', internalNumber: '104', unitType: '24', brand: 'Iveco', model: 'Daily', status: 'inactivo' },
 ];
 
 export default function Vehiculos() {
@@ -18,16 +18,16 @@ export default function Vehiculos() {
 
   // Form state
   const [plate, setPlate] = useState("");
+  const [internalNumber, setInternalNumber] = useState("");
   const [unitType, setUnitType] = useState("19");
   const [brand, setBrand] = useState("");
   const [model, setModel] = useState("");
-  const [year, setYear] = useState<number>(new Date().getFullYear());
   const [status, setStatus] = useState<VehicleStatus>("activo");
-  const [mileage, setMileage] = useState<number>(0);
-  const [lastMaintenance, setLastMaintenance] = useState("");
+  const [rtoNacional, setRtoNacional] = useState("");
+  const [rtoProvincial, setRtoProvincial] = useState("");
 
   useEffect(() => {
-    const savedVehicles = localStorage.getItem("vehicles");
+    const savedVehicles = localStorage.getItem("vehicles_v3");
     if (savedVehicles) {
       try {
         setVehicles(JSON.parse(savedVehicles));
@@ -37,36 +37,37 @@ export default function Vehiculos() {
       }
     } else {
       setVehicles(INITIAL_VEHICLES);
-      localStorage.setItem("vehicles", JSON.stringify(INITIAL_VEHICLES));
+      localStorage.setItem("vehicles_v3", JSON.stringify(INITIAL_VEHICLES));
     }
   }, []);
 
   const saveVehicles = (newVehicles: Vehicle[]) => {
     setVehicles(newVehicles);
-    localStorage.setItem("vehicles", JSON.stringify(newVehicles));
+    localStorage.setItem("vehicles_v3", JSON.stringify(newVehicles));
+    window.dispatchEvent(new Event("vehiclesUpdated"));
   };
 
   const handleOpenModal = (vehicle?: Vehicle) => {
     if (vehicle) {
       setEditingVehicle(vehicle);
       setPlate(vehicle.plate);
+      setInternalNumber(vehicle.internalNumber || "");
       setUnitType(vehicle.unitType);
       setBrand(vehicle.brand);
       setModel(vehicle.model);
-      setYear(vehicle.year);
       setStatus(vehicle.status);
-      setMileage(vehicle.mileage);
-      setLastMaintenance(vehicle.lastMaintenance || "");
+      setRtoNacional(vehicle.rtoNacional || "");
+      setRtoProvincial(vehicle.rtoProvincial || "");
     } else {
       setEditingVehicle(null);
       setPlate("");
+      setInternalNumber("");
       setUnitType("19");
       setBrand("");
       setModel("");
-      setYear(new Date().getFullYear());
       setStatus("activo");
-      setMileage(0);
-      setLastMaintenance("");
+      setRtoNacional("");
+      setRtoProvincial("");
     }
     setIsModalOpen(true);
   };
@@ -82,13 +83,13 @@ export default function Vehiculos() {
     const newVehicle: Vehicle = {
       id: editingVehicle ? editingVehicle.id : Date.now().toString(),
       plate: plate.toUpperCase(),
+      internalNumber,
       unitType,
       brand,
       model,
-      year,
       status,
-      mileage,
-      lastMaintenance
+      rtoNacional,
+      rtoProvincial
     };
 
     if (editingVehicle) {
@@ -220,11 +221,12 @@ export default function Vehiculos() {
           <table className="w-full text-sm text-left">
             <thead className="text-xs text-slate-400 border-b border-[#222631] bg-[#1a1d24] uppercase">
               <tr>
+                <th className="px-6 py-4 font-medium whitespace-nowrap">Nro Interno</th>
                 <th className="px-6 py-4 font-medium whitespace-nowrap">Patente</th>
                 <th className="px-6 py-4 font-medium whitespace-nowrap">Capacidad</th>
                 <th className="px-6 py-4 font-medium whitespace-nowrap">Marca / Modelo</th>
-                <th className="px-6 py-4 font-medium whitespace-nowrap">Año</th>
-                <th className="px-6 py-4 font-medium whitespace-nowrap">Kilometraje</th>
+                <th className="px-6 py-4 font-medium whitespace-nowrap">RTO Nac.</th>
+                <th className="px-6 py-4 font-medium whitespace-nowrap">RTO Prov.</th>
                 <th className="px-6 py-4 font-medium whitespace-nowrap">Estado</th>
                 <th className="px-6 py-4 font-medium text-right whitespace-nowrap">Acciones</th>
               </tr>
@@ -233,6 +235,9 @@ export default function Vehiculos() {
               {filteredVehicles.length > 0 ? (
                 filteredVehicles.map((vehicle) => (
                   <tr key={vehicle.id} className="hover:bg-[#1a1d24] transition-colors group">
+                    <td className="px-6 py-4 font-bold text-blue-400 whitespace-nowrap">
+                      {vehicle.internalNumber || '-'}
+                    </td>
                     <td className="px-6 py-4 font-bold text-white whitespace-nowrap">
                       {vehicle.plate}
                     </td>
@@ -243,10 +248,10 @@ export default function Vehiculos() {
                       {vehicle.brand} {vehicle.model}
                     </td>
                     <td className="px-6 py-4 text-slate-400 whitespace-nowrap">
-                      {vehicle.year}
+                      {vehicle.rtoNacional ? new Date(`${vehicle.rtoNacional}T00:00:00`).toLocaleDateString('es-AR') : '-'}
                     </td>
                     <td className="px-6 py-4 text-slate-400 whitespace-nowrap">
-                      {vehicle.mileage.toLocaleString()} km
+                      {vehicle.rtoProvincial ? new Date(`${vehicle.rtoProvincial}T00:00:00`).toLocaleDateString('es-AR') : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {getStatusBadge(vehicle.status)}
@@ -273,7 +278,7 @@ export default function Vehiculos() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
+                  <td colSpan={8} className="px-6 py-12 text-center text-slate-500">
                     <Bus className="w-12 h-12 mx-auto mb-3 opacity-20" />
                     No se encontraron vehículos.
                   </td>
@@ -304,6 +309,17 @@ export default function Vehiculos() {
             <form onSubmit={handleSaveVehicle} className="flex flex-col overflow-hidden">
               <div className="p-6 overflow-y-auto space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-sm font-medium text-slate-300">Nro Interno *</label>
+                    <input 
+                      type="text" 
+                      required
+                      value={internalNumber}
+                      onChange={(e) => setInternalNumber(e.target.value)}
+                      className="px-3 py-2 bg-[#0f1117] border border-[#222631] rounded-xl focus:outline-none focus:border-blue-500 text-sm text-white placeholder-slate-500"
+                      placeholder="Ej: 101"
+                    />
+                  </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-sm font-medium text-slate-300">Patente *</label>
                     <input 
@@ -353,29 +369,6 @@ export default function Vehiculos() {
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-sm font-medium text-slate-300">Año *</label>
-                    <input 
-                      type="number" 
-                      required
-                      min="1990"
-                      max={new Date().getFullYear() + 1}
-                      value={year}
-                      onChange={(e) => setYear(Number(e.target.value))}
-                      className="px-3 py-2 bg-[#0f1117] border border-[#222631] rounded-xl focus:outline-none focus:border-blue-500 text-sm text-white placeholder-slate-500"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-sm font-medium text-slate-300">Kilometraje *</label>
-                    <input 
-                      type="number" 
-                      required
-                      min="0"
-                      value={mileage}
-                      onChange={(e) => setMileage(Number(e.target.value))}
-                      className="px-3 py-2 bg-[#0f1117] border border-[#222631] rounded-xl focus:outline-none focus:border-blue-500 text-sm text-white placeholder-slate-500"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
                     <label className="text-sm font-medium text-slate-300">Estado *</label>
                     <select 
                       required
@@ -389,11 +382,20 @@ export default function Vehiculos() {
                     </select>
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-sm font-medium text-slate-300">Último Mantenimiento</label>
+                    <label className="text-sm font-medium text-slate-300">RTO Nacional (Vencimiento)</label>
                     <input 
                       type="date" 
-                      value={lastMaintenance}
-                      onChange={(e) => setLastMaintenance(e.target.value)}
+                      value={rtoNacional}
+                      onChange={(e) => setRtoNacional(e.target.value)}
+                      className="px-3 py-2 bg-[#0f1117] border border-[#222631] rounded-xl focus:outline-none focus:border-blue-500 text-sm text-white placeholder-slate-500"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-sm font-medium text-slate-300">RTO Provincial (Vencimiento)</label>
+                    <input 
+                      type="date" 
+                      value={rtoProvincial}
+                      onChange={(e) => setRtoProvincial(e.target.value)}
                       className="px-3 py-2 bg-[#0f1117] border border-[#222631] rounded-xl focus:outline-none focus:border-blue-500 text-sm text-white placeholder-slate-500"
                     />
                   </div>

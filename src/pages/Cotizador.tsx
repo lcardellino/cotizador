@@ -327,6 +327,12 @@ export default function Cotizador() {
     : (parseInt(localStorage.getItem('correlativeNumber') || '1', 10)).toString().padStart(5, '0');
 
   const handleSaveBudget = async () => {
+    if (mail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) {
+      setToastMessage({ title: 'Por favor ingrese un correo electrónico válido.', type: 'error' });
+      setTimeout(() => setToastMessage(null), 3000);
+      return;
+    }
+
     try {
       const newBudget: SavedBudget = {
         id: editingId || crypto.randomUUID(),
@@ -602,16 +608,16 @@ export default function Cotizador() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <TextInputField label="Cliente" value={cliente} onChange={setCliente} />
               <TextInputField label="Nombre Contacto" value={contacto} onChange={setContacto} />
-              <TextInputField label="Teléfono" value={telefono} onChange={setTelefono} />
+              <TextInputField label="Teléfono" value={telefono} onChange={(val) => setTelefono(val.replace(/\D/g, ''))} type="tel" />
               <TextInputField label="Mail" value={mail} onChange={setMail} type="email" />
               <div className="col-span-1 md:col-span-2 h-px bg-[#222631] my-2"></div>
               <TextInputField label="Origen" value={origen} onChange={setOrigen} />
               <TextInputField label="Destino" value={destino} onChange={setDestino} />
               <TextInputField label="Regreso a:" value={regresoA} onChange={setRegresoA} />
               <div className="col-span-1 md:col-span-2 h-px bg-[#222631] my-2"></div>
-              <TextInputField label="Fecha de Salida" value={fechaSalida} onChange={setFechaSalida} type="date" />
+              <TextInputField label="Fecha de Salida" value={fechaSalida} onChange={setFechaSalida} type="date" max="9999-12-31" />
               <TextInputField label="Horario de Salida" value={horaSalida} onChange={setHoraSalida} type="time" />
-              <TextInputField label="Fecha de Regreso" value={fechaRegreso} onChange={setFechaRegreso} type="date" />
+              <TextInputField label="Fecha de Regreso" value={fechaRegreso} onChange={setFechaRegreso} type="date" max="9999-12-31" />
               <TextInputField label="Horario de Regreso" value={horaRegreso} onChange={setHoraRegreso} type="time" />
               <div className="md:col-span-2 flex flex-col gap-1.5 mt-2">
                 <label className="text-sm font-medium text-slate-300">Descripción del servicio</label>
@@ -999,18 +1005,21 @@ function TextInputField({
   label, 
   value, 
   onChange, 
-  type = "text" 
+  type = "text",
+  max
 }: { 
   label: string; 
   value: string; 
   onChange: (val: string) => void;
   type?: string;
+  max?: string;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
       <label className="text-sm font-medium text-slate-300">{label}</label>
       <input 
         type={type}
+        max={max}
         className="px-4 py-2.5 bg-[#0f1117] border border-[#222631] rounded-xl focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 text-sm text-white placeholder-slate-500 transition-all"
         value={value}
         onChange={(e) => onChange(e.target.value)}
