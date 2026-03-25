@@ -5,6 +5,7 @@ import {
   PieChart, Pie, Cell, Legend, ComposedChart, Line
 } from "recharts";
 import { MapPin, Users, Route, Car, Plus, FileText, CheckCircle, DollarSign, TrendingUp, TrendingDown, ArrowUpRight, XCircle, Clock } from "lucide-react";
+import { api } from "../lib/api";
 
 interface DashboardData {
   completedTrips: number;
@@ -40,13 +41,13 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    try {
-      const savedBudgetsStr = localStorage.getItem(`savedBudgets_${currentUser}`);
-      const budgets: any[] = savedBudgetsStr ? JSON.parse(savedBudgetsStr) : [];
-      
-      const now = new Date();
-      const currentMonth = now.getMonth();
-      const currentYear = now.getFullYear();
+    const loadDashboardData = async () => {
+      try {
+        const budgets = await api.getBudgets(currentUser);
+        
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
       
       const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
       const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
@@ -239,10 +240,12 @@ export default function Dashboard() {
       }
       setLoading(false);
     } catch (err) {
-      console.error("Failed to load dashboard data from localStorage", err);
+      console.error("Failed to load dashboard data", err);
       setLoading(false);
     }
-  }, []);
+  };
+  loadDashboardData();
+}, [currentUser]);
 
   if (loading || !data) {
     return (

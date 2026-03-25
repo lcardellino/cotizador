@@ -5,6 +5,7 @@ import html2pdf from "html2pdf.js";
 import { format } from "date-fns";
 import { SavedBudget, BudgetStatus, TripType, PaymentStatus } from "../types";
 import PdfExportTemplate from "../components/PdfExportTemplate";
+import { api } from "../lib/api";
 
 export default function Cotizaciones() {
   const currentUser = localStorage.getItem("currentUser") || "lucas";
@@ -18,47 +19,40 @@ export default function Cotizaciones() {
   const [selectedBudgetForPdf, setSelectedBudgetForPdf] = useState<SavedBudget | null>(null);
 
   useEffect(() => {
-    const loadBudgets = () => {
-      const savedBudgetsStr = localStorage.getItem(`savedBudgets_${currentUser}`);
-      if (savedBudgetsStr) {
-        try {
-          const parsed = JSON.parse(savedBudgetsStr);
-          setBudgets(parsed);
-        } catch (e) {
-          console.error("Error parsing saved budgets", e);
-        }
-      }
+    const loadBudgets = async () => {
+      const parsed = await api.getBudgets(currentUser);
+      setBudgets(parsed);
     };
     loadBudgets();
-  }, []);
+  }, [currentUser]);
 
-  const handleStatusChange = (id: string, newStatus: BudgetStatus) => {
+  const handleStatusChange = async (id: string, newStatus: BudgetStatus) => {
     const updatedBudgets = budgets.map(b => b.id === id ? { ...b, status: newStatus } : b);
     setBudgets(updatedBudgets);
-    localStorage.setItem(`savedBudgets_${currentUser}`, JSON.stringify(updatedBudgets));
+    await api.syncBudgets(currentUser, updatedBudgets);
   };
 
-  const handlePaymentStatusChange = (id: string, newStatus: PaymentStatus) => {
+  const handlePaymentStatusChange = async (id: string, newStatus: PaymentStatus) => {
     const updatedBudgets = budgets.map(b => b.id === id ? { ...b, paymentStatus: newStatus } : b);
     setBudgets(updatedBudgets);
-    localStorage.setItem(`savedBudgets_${currentUser}`, JSON.stringify(updatedBudgets));
+    await api.syncBudgets(currentUser, updatedBudgets);
   };
 
-  const handleTripTypeChange = (id: string, newType: TripType) => {
+  const handleTripTypeChange = async (id: string, newType: TripType) => {
     const updatedBudgets = budgets.map(b => b.id === id ? { ...b, tripType: newType } : b);
     setBudgets(updatedBudgets);
-    localStorage.setItem(`savedBudgets_${currentUser}`, JSON.stringify(updatedBudgets));
+    await api.syncBudgets(currentUser, updatedBudgets);
   };
 
   const handleDelete = (id: string) => {
     setDeleteConfirmId(id);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (deleteConfirmId) {
       const updatedBudgets = budgets.filter((b) => b.id !== deleteConfirmId);
       setBudgets(updatedBudgets);
-      localStorage.setItem(`savedBudgets_${currentUser}`, JSON.stringify(updatedBudgets));
+      await api.syncBudgets(currentUser, updatedBudgets);
       setDeleteConfirmId(null);
     }
   };

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Bus, Plus, Search, Edit2, Trash2, X, CheckCircle, AlertTriangle, XCircle, Wrench } from "lucide-react";
 import { Vehicle, VehicleStatus } from "../types";
+import { api } from "../lib/api";
 
 const INITIAL_VEHICLES: Vehicle[] = [
   { id: '1', plate: 'AF 123 CD', internalNumber: '101', unitType: '19', brand: 'Mercedes-Benz', model: 'Sprinter', status: 'activo' },
@@ -27,24 +28,21 @@ export default function Vehiculos() {
   const [rtoProvincial, setRtoProvincial] = useState("");
 
   useEffect(() => {
-    const savedVehicles = localStorage.getItem("vehicles_v3");
-    if (savedVehicles) {
-      try {
-        setVehicles(JSON.parse(savedVehicles));
-      } catch (e) {
-        console.error("Error parsing vehicles", e);
+    const loadVehicles = async () => {
+      const data = await api.getVehicles();
+      if (data && data.length > 0) {
+        setVehicles(data);
+      } else {
         setVehicles(INITIAL_VEHICLES);
+        api.syncVehicles(INITIAL_VEHICLES);
       }
-    } else {
-      setVehicles(INITIAL_VEHICLES);
-      localStorage.setItem("vehicles_v3", JSON.stringify(INITIAL_VEHICLES));
-    }
+    };
+    loadVehicles();
   }, []);
 
-  const saveVehicles = (newVehicles: Vehicle[]) => {
+  const saveVehicles = async (newVehicles: Vehicle[]) => {
     setVehicles(newVehicles);
-    localStorage.setItem("vehicles_v3", JSON.stringify(newVehicles));
-    window.dispatchEvent(new Event("vehiclesUpdated"));
+    await api.syncVehicles(newVehicles);
   };
 
   const handleOpenModal = (vehicle?: Vehicle) => {

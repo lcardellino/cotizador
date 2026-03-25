@@ -9,7 +9,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -21,4 +21,80 @@ model Trip {
   type       String?
   scope      String?
   date       DateTime @default(now())
+}
+
+model Vehicle {
+  id             String  @id
+  plate          String
+  internalNumber String
+  unitType       String
+  brand          String
+  model          String
+  status         String
+  rtoNacional    String?
+  rtoProvincial  String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model SavedBudget {
+  id            String  @id
+  userId        String
+  budgetNumber  String
+  status        String
+  paymentStatus String?
+  date          String
+  client        String
+  time          String
+  destination   String
+  km            Float
+  cost          Float
+  profit        Float
+  finalPrice    Float
+  contact       String
+  phone         String
+  tripType      String
+  passengers    Int
+  timestamp     Float
+
+  // Extra fields for PDF export
+  mail             String?
+  origen           String?
+  regresoA         String?
+  fechaRegreso     String?
+  horaRegreso      String?
+  descripcion      String?
+  subtotal         Float?
+  ivaAmount        Float?
+  carCost          Float?
+  depreciationCost Float?
+  totalDriverCost  Float?
+  dirtRoadCost     Float?
+
+  // Full state fields
+  kmProductivos     Float?
+  kmDestino         Float?
+  kmImproductivos   Float?
+  unitType          String?
+  dieselPrice       Float?
+  driverCount       Int?
+  busCount          Int?
+  driverServiceType String?
+  dirtRoadPercent   Float?
+  profitMultiplier  Float?
+
+  // JSON fields for complex objects
+  driverShift       Json?
+  driverViatico     Json?
+  driverTomeDeje    Json?
+  driverExtraHour   Json?
+  driverBed         Json?
+  natBreakfast      Json?
+  natLunch          Json?
+  natSnack          Json?
+  natDinner         Json?
+  natBed            Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

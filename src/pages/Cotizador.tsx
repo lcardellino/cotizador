@@ -5,6 +5,7 @@ import html2pdf from "html2pdf.js";
 import { format } from "date-fns";
 import PdfExportTemplate from "../components/PdfExportTemplate";
 import { SavedBudget, TripType } from "../types";
+import { api } from "../lib/api";
 
 type UnitType = "19" | "24" | "44" | "46" | "60";
 type DriverServiceType = "provincial" | "nacional";
@@ -190,10 +191,11 @@ export default function Cotizador() {
   };
 
   useEffect(() => {
-    const existingBudgetsStr = localStorage.getItem(`savedBudgets_${currentUser}`);
-    if (existingBudgetsStr) {
-      setSavedBudgets(JSON.parse(existingBudgetsStr));
-    }
+    const loadSavedBudgets = async () => {
+      const budgets = await api.getBudgets(currentUser);
+      setSavedBudgets(budgets);
+    };
+    loadSavedBudgets();
   }, [currentUser]);
 
   useEffect(() => {
@@ -388,20 +390,19 @@ export default function Cotizador() {
         profitMultiplier,
       };
 
-      const existingBudgetsStr = localStorage.getItem(`savedBudgets_${currentUser}`);
-      let existingBudgets: SavedBudget[] = existingBudgetsStr ? JSON.parse(existingBudgetsStr) : [];
+      let existingBudgets: SavedBudget[] = savedBudgets;
       
       if (editingId) {
         // Update existing budget
         existingBudgets = existingBudgets.map(b => b.id === editingId ? newBudget : b);
-        localStorage.setItem(`savedBudgets_${currentUser}`, JSON.stringify(existingBudgets));
+        await api.syncBudgets(currentUser, existingBudgets);
         setSavedBudgets(existingBudgets);
         setToastMessage({ title: 'Cotización actualizada exitosamente.', type: 'success' });
         setTimeout(() => setToastMessage(null), 3000);
       } else {
         // Create new budget
         const updatedBudgets = [newBudget, ...existingBudgets];
-        localStorage.setItem(`savedBudgets_${currentUser}`, JSON.stringify(updatedBudgets));
+        await api.syncBudgets(currentUser, updatedBudgets);
         setSavedBudgets(updatedBudgets);
         
         // Increment correlative number since we used it

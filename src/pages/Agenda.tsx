@@ -18,6 +18,7 @@ import {
 import { es } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, AlertTriangle, CheckCircle, Clock, Calendar as CalendarIcon, MapPin, Users, Bus, DollarSign, X, FileText, Edit2, Save } from "lucide-react";
 import { SavedBudget, BudgetStatus, PaymentStatus } from "../types";
+import { api } from "../lib/api";
 
 export default function Agenda() {
   const currentUser = localStorage.getItem("currentUser") || "lucas";
@@ -29,21 +30,13 @@ export default function Agenda() {
   const [editPaymentStatus, setEditPaymentStatus] = useState<PaymentStatus>('falta_pagar');
 
   useEffect(() => {
-    const loadBudgets = () => {
-      const savedBudgetsStr = localStorage.getItem(`savedBudgets_${currentUser}`);
-      if (savedBudgetsStr) {
-        try {
-          const parsed = JSON.parse(savedBudgetsStr);
-          // Filter out cancelled budgets for the agenda
-          const activeBudgets = parsed.filter((b: SavedBudget) => b.status !== 'cancelado');
-          setBudgets(activeBudgets);
-        } catch (e) {
-          console.error("Error parsing saved budgets", e);
-        }
-      }
+    const loadBudgets = async () => {
+      const parsed = await api.getBudgets(currentUser);
+      const activeBudgets = parsed.filter((b: SavedBudget) => b.status !== 'cancelado');
+      setBudgets(activeBudgets);
     };
     loadBudgets();
-  }, []);
+  }, [currentUser]);
 
   const handleOpenBudget = (budget: SavedBudget) => {
     setSelectedBudget(budget);
@@ -57,32 +50,22 @@ export default function Agenda() {
     setIsEditing(false);
   };
 
-  const handleSaveBudgetStatus = () => {
+  const handleSaveBudgetStatus = async () => {
     if (!selectedBudget) return;
     
-    const savedBudgetsStr = localStorage.getItem(`savedBudgets_${currentUser}`);
-    if (savedBudgetsStr) {
-      try {
-        const parsed = JSON.parse(savedBudgetsStr);
-        const updatedBudgets = parsed.map((b: SavedBudget) => 
-          b.id === selectedBudget.id ? { ...b, status: editStatus, paymentStatus: editPaymentStatus } : b
-        );
-        localStorage.setItem(`savedBudgets_${currentUser}`, JSON.stringify(updatedBudgets));
-        
-        // Update local state
-        const activeBudgets = updatedBudgets.filter((b: SavedBudget) => b.status !== 'cancelado');
-        setBudgets(activeBudgets);
-        
-        // Update selected budget
-        setSelectedBudget({ ...selectedBudget, status: editStatus, paymentStatus: editPaymentStatus });
-        setIsEditing(false);
-        
-        // Dispatch event so other components update if needed
-        window.dispatchEvent(new Event("budgetsUpdated"));
-      } catch (e) {
-        console.error("Error updating budget", e);
-      }
-    }
+    const parsed = await api.getBudgets(currentUser);
+    const updatedBudgets = parsed.map((b: SavedBudget) => 
+      b.id === selectedBudget.id ? { ...b, status: editStatus, paymentStatus: editPaymentStatus } : b
+    );
+    await api.syncBudgets(currentUser, updatedBudgets);
+    
+    // Update local state
+    const activeBudgets = updatedBudgets.filter((b: SavedBudget) => b.status !== 'cancelado');
+    setBudgets(activeBudgets);
+    
+    // Update selected budget
+    setSelectedBudget({ ...selectedBudget, status: editStatus, paymentStatus: editPaymentStatus });
+    setIsEditing(false);
   };
 
   const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));

@@ -3,6 +3,7 @@ import { LayoutDashboard, Calculator, FileText, Users, Calendar, Bus, ChevronLef
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { useState, useEffect } from "react";
+import { api } from "./lib/api";
 
 import Dashboard from "./pages/Dashboard";
 import Cotizador from "./pages/Cotizador";
@@ -117,73 +118,67 @@ function Layout({ children, onLogout }: { children: ReactNode, onLogout: () => v
   const currentUser = localStorage.getItem("currentUser") || "lucas";
 
   useEffect(() => {
-    const loadBudgets = () => {
-      const savedBudgetsStr = localStorage.getItem(`savedBudgets_${currentUser}`);
-      if (savedBudgetsStr) {
-        try {
-          const parsed = JSON.parse(savedBudgetsStr);
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          
-          const threeDaysFromNow = new Date(today);
-          threeDaysFromNow.setDate(today.getDate() + 3);
+    const loadBudgets = async () => {
+      try {
+        const parsed = await api.getBudgets(currentUser);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const threeDaysFromNow = new Date(today);
+        threeDaysFromNow.setDate(today.getDate() + 3);
 
-          const upcoming = parsed.filter((b: any) => {
-            if (!b.date) return false;
-            // Assuming date is in YYYY-MM-DD format
-            const dateStringWithTime = b.date.includes('T') ? b.date : `${b.date}T00:00:00`;
-            const eventDate = new Date(dateStringWithTime);
-            return eventDate >= today && eventDate <= threeDaysFromNow && b.status === 'confirmado';
-          }).sort((a: any, b: any) => {
-            const dateA = new Date(a.date.includes('T') ? a.date : `${a.date}T00:00:00`).getTime();
-            const dateB = new Date(b.date.includes('T') ? b.date : `${b.date}T00:00:00`).getTime();
-            return dateA - dateB;
-          });
+        const upcoming = parsed.filter((b: any) => {
+          if (!b.date) return false;
+          // Assuming date is in YYYY-MM-DD format
+          const dateStringWithTime = b.date.includes('T') ? b.date : `${b.date}T00:00:00`;
+          const eventDate = new Date(dateStringWithTime);
+          return eventDate >= today && eventDate <= threeDaysFromNow && b.status === 'confirmado';
+        }).sort((a: any, b: any) => {
+          const dateA = new Date(a.date.includes('T') ? a.date : `${a.date}T00:00:00`).getTime();
+          const dateB = new Date(b.date.includes('T') ? b.date : `${b.date}T00:00:00`).getTime();
+          return dateA - dateB;
+        });
 
-          setUpcomingEvents(upcoming);
-        } catch (e) {
-          console.error("Error parsing saved budgets for alerts", e);
-        }
+        setUpcomingEvents(upcoming);
+      } catch (e) {
+        console.error("Error fetching saved budgets for alerts", e);
       }
     };
 
-    const loadVehicles = () => {
-      const savedVehiclesStr = localStorage.getItem("vehicles_v2");
-      if (savedVehiclesStr) {
-        try {
-          const vehicles = JSON.parse(savedVehiclesStr);
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          
-          const tenDaysFromNow = new Date(today);
-          tenDaysFromNow.setDate(today.getDate() + 10);
+    const loadVehicles = async () => {
+      try {
+        const vehicles = await api.getVehicles();
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const tenDaysFromNow = new Date(today);
+        tenDaysFromNow.setDate(today.getDate() + 10);
 
-          const rtos: any[] = [];
+        const rtos: any[] = [];
 
-          vehicles.forEach((v: any) => {
-            if (v.rtoNacional) {
-              const rtoNacDate = new Date(`${v.rtoNacional}T00:00:00`);
-              if (rtoNacDate >= today && rtoNacDate <= tenDaysFromNow) {
-                rtos.push({ id: `${v.id}-nac`, plate: v.plate, type: 'Nacional', date: v.rtoNacional });
-              } else if (rtoNacDate < today) {
-                rtos.push({ id: `${v.id}-nac`, plate: v.plate, type: 'Nacional', date: v.rtoNacional, expired: true });
-              }
+        vehicles.forEach((v: any) => {
+          if (v.rtoNacional) {
+            const rtoNacDate = new Date(`${v.rtoNacional}T00:00:00`);
+            if (rtoNacDate >= today && rtoNacDate <= tenDaysFromNow) {
+              rtos.push({ id: `${v.id}-nac`, plate: v.plate, type: 'Nacional', date: v.rtoNacional });
+            } else if (rtoNacDate < today) {
+              rtos.push({ id: `${v.id}-nac`, plate: v.plate, type: 'Nacional', date: v.rtoNacional, expired: true });
             }
-            if (v.rtoProvincial) {
-              const rtoProvDate = new Date(`${v.rtoProvincial}T00:00:00`);
-              if (rtoProvDate >= today && rtoProvDate <= tenDaysFromNow) {
-                rtos.push({ id: `${v.id}-prov`, plate: v.plate, type: 'Provincial', date: v.rtoProvincial });
-              } else if (rtoProvDate < today) {
-                rtos.push({ id: `${v.id}-prov`, plate: v.plate, type: 'Provincial', date: v.rtoProvincial, expired: true });
-              }
+          }
+          if (v.rtoProvincial) {
+            const rtoProvDate = new Date(`${v.rtoProvincial}T00:00:00`);
+            if (rtoProvDate >= today && rtoProvDate <= tenDaysFromNow) {
+              rtos.push({ id: `${v.id}-prov`, plate: v.plate, type: 'Provincial', date: v.rtoProvincial });
+            } else if (rtoProvDate < today) {
+              rtos.push({ id: `${v.id}-prov`, plate: v.plate, type: 'Provincial', date: v.rtoProvincial, expired: true });
             }
-          });
+          }
+        });
 
-          rtos.sort((a, b) => new Date(`${a.date}T00:00:00`).getTime() - new Date(`${b.date}T00:00:00`).getTime());
-          setUpcomingRTOs(rtos);
-        } catch (e) {
-          console.error("Error parsing vehicles for alerts", e);
-        }
+        rtos.sort((a, b) => new Date(`${a.date}T00:00:00`).getTime() - new Date(`${b.date}T00:00:00`).getTime());
+        setUpcomingRTOs(rtos);
+      } catch (e) {
+        console.error("Error fetching vehicles for alerts", e);
       }
     };
 
