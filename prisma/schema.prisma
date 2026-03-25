@@ -9,8 +9,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 model Trip {
@@ -84,16 +84,16 @@ model SavedBudget {
   profitMultiplier  Float?
 
   // JSON fields for complex objects
-  driverShift       Json?
-  driverViatico     Json?
-  driverTomeDeje    Json?
-  driverExtraHour   Json?
-  driverBed         Json?
-  natBreakfast      Json?
-  natLunch          Json?
-  natSnack          Json?
-  natDinner         Json?
-  natBed            Json?
+  driverShift       String?
+  driverViatico     String?
+  driverTomeDeje    String?
+  driverExtraHour   String?
+  driverBed         String?
+  natBreakfast      String?
+  natLunch          String?
+  natSnack          String?
+  natDinner         String?
+  natBed            String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

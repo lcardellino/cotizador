@@ -162,7 +162,22 @@ async function startServer() {
       const budgets = await prisma.savedBudget.findMany({
         where: { userId }
       });
-      res.json(budgets);
+      
+      const parsedBudgets = budgets.map(b => ({
+        ...b,
+        driverShift: b.driverShift ? JSON.parse(b.driverShift) : null,
+        driverViatico: b.driverViatico ? JSON.parse(b.driverViatico) : null,
+        driverTomeDeje: b.driverTomeDeje ? JSON.parse(b.driverTomeDeje) : null,
+        driverExtraHour: b.driverExtraHour ? JSON.parse(b.driverExtraHour) : null,
+        driverBed: b.driverBed ? JSON.parse(b.driverBed) : null,
+        natBreakfast: b.natBreakfast ? JSON.parse(b.natBreakfast) : null,
+        natLunch: b.natLunch ? JSON.parse(b.natLunch) : null,
+        natSnack: b.natSnack ? JSON.parse(b.natSnack) : null,
+        natDinner: b.natDinner ? JSON.parse(b.natDinner) : null,
+        natBed: b.natBed ? JSON.parse(b.natBed) : null,
+      }));
+      
+      res.json(parsedBudgets);
     } catch (error) {
       console.error("Error fetching budgets:", error);
       res.status(500).json({ error: "Internal server error" });
@@ -226,16 +241,16 @@ async function startServer() {
               driverServiceType: b.driverServiceType,
               dirtRoadPercent: b.dirtRoadPercent,
               profitMultiplier: b.profitMultiplier,
-              driverShift: b.driverShift || null,
-              driverViatico: b.driverViatico || null,
-              driverTomeDeje: b.driverTomeDeje || null,
-              driverExtraHour: b.driverExtraHour || null,
-              driverBed: b.driverBed || null,
-              natBreakfast: b.natBreakfast || null,
-              natLunch: b.natLunch || null,
-              natSnack: b.natSnack || null,
-              natDinner: b.natDinner || null,
-              natBed: b.natBed || null
+              driverShift: b.driverShift ? JSON.stringify(b.driverShift) : null,
+              driverViatico: b.driverViatico ? JSON.stringify(b.driverViatico) : null,
+              driverTomeDeje: b.driverTomeDeje ? JSON.stringify(b.driverTomeDeje) : null,
+              driverExtraHour: b.driverExtraHour ? JSON.stringify(b.driverExtraHour) : null,
+              driverBed: b.driverBed ? JSON.stringify(b.driverBed) : null,
+              natBreakfast: b.natBreakfast ? JSON.stringify(b.natBreakfast) : null,
+              natLunch: b.natLunch ? JSON.stringify(b.natLunch) : null,
+              natSnack: b.natSnack ? JSON.stringify(b.natSnack) : null,
+              natDinner: b.natDinner ? JSON.stringify(b.natDinner) : null,
+              natBed: b.natBed ? JSON.stringify(b.natBed) : null
             }))
           });
         }
